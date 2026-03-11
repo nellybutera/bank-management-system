@@ -1,6 +1,7 @@
 package com.bank_management_system.accounts;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.bank_management_system.customers.Customer;
@@ -31,8 +32,8 @@ public abstract class Account implements Transactable {
     public String getCustomerId(){ return customer.getCustomerId();}
     public double getBalance(){ return balance; }
     public String getStatus(){ return status;}
-    public List<Transaction> getTransactions(){
-        return transactionHistory;
+    public List<Transaction> getTransactions() {
+        return Collections.unmodifiableList(transactionHistory);
     }
     
     public abstract void displayAccountDetails();
@@ -79,6 +80,12 @@ public abstract class Account implements Transactable {
             System.out.println("Transaction failed: " + e.getMessage());
             return false;
         }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] %s Account | Owner: %s | Balance: $%,.2f | Status: %s",
+                accountNumber, getAccountType(), customer.getName(), balance, status);
     }
     
 }

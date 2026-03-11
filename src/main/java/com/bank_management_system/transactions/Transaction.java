@@ -31,7 +31,7 @@ public final class Transaction{
     public String getTransactionId(){ return transactionId; }
     public String getAccountNumber(){ return accountNumber; }
     public String getType(){ return type; }
-    public double amount(){ return amount; }
+    public double getAmount(){ return amount; }
     public double getBalanceAfter(){ return balanceAfter; }
     public String getTimestamp(){ return timestamp; }
 

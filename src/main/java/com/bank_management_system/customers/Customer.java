@@ -1,4 +1,8 @@
 package com.bank_management_system.customers;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.bank_management_system.accounts.Account;
 
 public abstract class Customer {
     private final String customerId;
@@ -6,6 +10,7 @@ public abstract class Customer {
     private int age;
     private String contact;
     private String address;
+    private final List<Account> accounts;
 
     private static int customerCounter = 1;
 
@@ -15,6 +20,7 @@ public abstract class Customer {
         this.age = age;
         this.contact = contact;
         this.address = address;
+        this.accounts = new ArrayList<>();
     }
 
     public String getCustomerId(){ return customerId; }
@@ -43,5 +49,9 @@ public abstract class Customer {
 
     public abstract String getCustomerType();
 
-    
+    @Override
+    public String toString() {
+        return String.format("[%s] %s (%s) | Accounts: %d",
+                customerId, name, getCustomerType(), accounts.size());
+    }
 }
