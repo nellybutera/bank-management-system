@@ -6,6 +6,10 @@ public class RegularCustomer extends Customer {
         super(name, age, contact, address);
     }
 
+    public boolean hasWaivedFees(){
+        return false;
+    }
+
     @Override
     public void displayCustomerDetails(){
         System.out.println(" Customer ID : " + getCustomerId());
