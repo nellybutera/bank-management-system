@@ -7,8 +7,8 @@ public class SavingsAccount extends Account{
     private double interestRate;
     private double minimumBalance;
 
-    public SavingsAccount(String accountNumber, Customer customer, double balance, String status){
-        super(accountNumber, customer, balance, status);
+    public SavingsAccount(Customer customer, double balance){
+        super(customer, balance);
         interestRate = 0.035;
         minimumBalance = 500;
     }
@@ -34,7 +34,7 @@ public class SavingsAccount extends Account{
     }
 
     @Override
-    public void withdraw(double amount) throws InsufficientFundsException{
+    protected void validateWithdrawal(double amount) throws InsufficientFundsException{
         if (getBalance() - amount < minimumBalance){
             throw new InsufficientFundsException(String.format(
                     "Withdrawal denied. Savings account must maintain a minimum balance of $%.2f. " +
