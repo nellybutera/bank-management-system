@@ -46,6 +46,7 @@ public class AccountService {
 
         CheckingAccount account = new CheckingAccount(customer, initialBalance, feesWaived);
         accountManager.addAccount(account);
+        customer.addAccount(account);
         return account;
     }
 

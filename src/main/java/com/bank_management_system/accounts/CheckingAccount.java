@@ -17,6 +17,10 @@ public class CheckingAccount extends Account{
         this.feesWaived = feesWaived;
     }
 
+    public boolean isFeesWaived() {
+        return feesWaived;
+    }
+    
     @Override
     public String getAccountType(){
         return "Checking";
