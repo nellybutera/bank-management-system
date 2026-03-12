@@ -1,9 +1,5 @@
 package com.bank_management_system.accounts;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.shared.InsufficientFundsException;
 import com.bank_management_system.shared.InvalidAmountException;
