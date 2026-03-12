@@ -85,7 +85,7 @@ public class AccountService {
         accountManager.viewAllAccounts();
     }
 
-    // additional method to close an account
+    // additional method to close an account (soft delete — sets status to "Closed")
     public void closeAccount(String accountNumber){
         Account account = accountManager.findAccountOrThrow(accountNumber);
 
@@ -95,6 +95,37 @@ public class AccountService {
 
         account.closeAccount();
         System.out.println("Account " + accountNumber + " is now closed");
+    }
+
+    // deducts the $10 monthly fee from every non-waived CheckingAccount and logs each as a transaction
+    public int applyMonthlyFees(){
+        Account[] accounts = accountManager.getAccounts();
+        int count = 0;
+        for (Account account : accounts) {
+            if (account instanceof CheckingAccount ca) {
+                Transaction transaction = ca.applyMonthlyFee();
+                if (transaction != null) {
+                    transactionManager.addTransaction(transaction);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    // credits 3.5% interest to every active SavingsAccount and logs each as a deposit transaction
+    public int applyInterest(){
+        Account[] accounts = accountManager.getAccounts();
+        int count = 0;
+        for (Account account : accounts) {
+            if (account instanceof SavingsAccount sa && account.getStatus().equalsIgnoreCase("Active")) {
+                double interest = sa.calculateInterest();
+                Transaction transaction = account.deposit(interest);
+                transactionManager.addTransaction(transaction);
+                count++;
+            }
+        }
+        return count;
     }
 
 

@@ -1,5 +1,6 @@
 package com.bank_management_system.accounts;
 import com.bank_management_system.shared.AccountNotFoundException;
+import java.util.Arrays;
 
 
 public class AccountManager {
@@ -67,5 +68,9 @@ public class AccountManager {
 
     public int getAccountCount() {
         return accountCount;
+    }
+
+    public Account[] getAccounts() {
+        return Arrays.copyOf(accounts, accountCount);
     }
 }

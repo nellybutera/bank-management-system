@@ -26,10 +26,11 @@ public class CheckingAccount extends Account{
         return "Checking";
     }
 
-    public void applyMonthlyFee(){
+    public com.bank_management_system.transactions.Transaction applyMonthlyFee(){
         if (!feesWaived){
-            withdraw(monthlyFee);
+            return withdraw(monthlyFee);
         }
+        return null;
     }
 
 

@@ -13,7 +13,7 @@ public class SavingsAccount extends Account{
     }
 
     public double calculateInterest(){
-        return getBalance() + interestRate;
+        return getBalance() * interestRate;
     }
 
     public double getInterestRate(){ return interestRate; }

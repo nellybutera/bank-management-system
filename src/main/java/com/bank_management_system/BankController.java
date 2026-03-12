@@ -27,14 +27,17 @@ public class BankController {
         boolean running = true;
         while (running) {
             printMenu();
-            int choice = inputReader.readMenuChoice(1, 5);
+            int choice = inputReader.readMenuChoice(1, 8);
 
             switch (choice) {
                 case 1 -> handleCreateAccount();
                 case 2 -> handleViewAccounts();
                 case 3 -> handleProcessTransaction();
                 case 4 -> handleViewTransactionHistory();
-                case 5 -> running = false;
+                case 5 -> handleCloseAccount();
+                case 6 -> handleApplyFeesAndInterest();
+                case 7 -> handleViewCustomerAccounts();
+                case 8 -> running = false;
             }
         }
 
@@ -206,6 +209,93 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    private void handleCloseAccount() {
+        System.out.println("\n--- CLOSE ACCOUNT ---");
+        System.out.print("Enter Account Number: ");
+        String accNum = inputReader.nextLine();
+
+        try {
+            Account account = accountService.getAccountDetails(accNum);
+
+            System.out.println("\nAccount Details:");
+            System.out.printf("Customer: %s | Account Type: %s | Balance: $%,.2f | Status: %s%n",
+                    account.getCustomerName(), account.getAccountType(),
+                    account.getBalance(), account.getStatus());
+
+            if (account.getBalance() != 0) {
+                printError(String.format(
+                        "Cannot close account. Balance must be $0.00 before closing. Current balance: $%,.2f",
+                        account.getBalance()));
+                inputReader.pressEnterToContinue();
+                return;
+            }
+
+            System.out.print("\nPermanently close account " + accNum + "? This cannot be undone. (Y/N): ");
+            String confirm = inputReader.nextLine();
+
+            if (!confirm.equalsIgnoreCase("Y")) {
+                System.out.println("Account closure cancelled.");
+                inputReader.pressEnterToContinue();
+                return;
+            }
+
+            accountService.closeAccount(accNum);
+
+        } catch (Exception e) {
+            printError(e.getMessage());
+        }
+        inputReader.pressEnterToContinue();
+    }
+
+    private void handleApplyFeesAndInterest() {
+        System.out.println("\n--- APPLY MONTHLY FEES & INTEREST ---");
+        System.out.println("This operation will:");
+        System.out.println("  - Deduct $10.00 monthly fee from all Checking accounts (where not waived)");
+        System.out.println("  - Credit 3.5% interest to all active Savings accounts");
+        System.out.print("\nProceed? (Y/N): ");
+        String confirm = inputReader.nextLine();
+
+        if (!confirm.equalsIgnoreCase("Y")) {
+            System.out.println("Operation cancelled.");
+            inputReader.pressEnterToContinue();
+            return;
+        }
+
+        try {
+            int feesApplied     = accountService.applyMonthlyFees();
+            int interestApplied = accountService.applyInterest();
+            System.out.printf("%nMonthly fees applied : %d account(s)%n", feesApplied);
+            System.out.printf("Interest credited    : %d account(s)%n", interestApplied);
+            System.out.println("Done. Transactions recorded in ledger.");
+        } catch (Exception e) {
+            printError(e.getMessage());
+        }
+        inputReader.pressEnterToContinue();
+    }
+
+    private void handleViewCustomerAccounts() {
+        System.out.println("\n--- VIEW CUSTOMER ACCOUNTS ---");
+        System.out.print("Enter Customer ID (e.g. CUST001): ");
+        String customerId = inputReader.nextLine();
+
+        try {
+            customerService.getAllCustomers().stream()
+                    .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
+                    .findFirst()
+                    .ifPresentOrElse(
+                            customer -> {
+                                System.out.printf("%nCustomer: %s (%s)%n",
+                                        customer.getName(), customer.getCustomerType());
+                                customer.viewCustomerAccounts();
+                            },
+                            () -> printError("Customer not found: " + customerId)
+                    );
+        } catch (Exception e) {
+            printError(e.getMessage());
+        }
+        inputReader.pressEnterToContinue();
+    }
+
     // ui methods
     // ui methods
 
@@ -224,7 +314,10 @@ public class BankController {
         System.out.println("  2. View Accounts");
         System.out.println("  3. Process Transaction");
         System.out.println("  4. View Transaction History");
-        System.out.println("  5. Exit");
+        System.out.println("  5. Close Account");
+        System.out.println("  6. Apply Monthly Fees & Interest");
+        System.out.println("  7. View Customer Accounts");
+        System.out.println("  8. Exit");
         System.out.println("----------------------------------------------");
         System.out.print("Enter choice: ");
     }
