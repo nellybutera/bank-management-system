@@ -86,7 +86,6 @@ public abstract class Account implements Transactable {
                 accountNumber, getAccountType(), customer.getName(), balance, status);
     }
 
-
     // additional method to disable account
     public void closeAccount() {
         this.status = "Closed"; // Usually, you'd also set balance to 0 and transfer it elsewhere
