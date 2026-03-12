@@ -11,7 +11,8 @@ public class PremiumCustomer extends Customer {
         return minimumBalance;
     }
 
-    public boolean hasWaivedFees(){
+    @Override
+    public boolean isEligibleForFeeWaiver(){
         return true;
     }
 
