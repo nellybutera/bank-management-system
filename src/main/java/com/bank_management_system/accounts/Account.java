@@ -7,6 +7,7 @@ import java.util.List;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.shared.InsufficientFundsException;
 import com.bank_management_system.shared.InvalidAmountException;
+import com.bank_management_system.shared.IllegalStateException;
 import com.bank_management_system.shared.Transactable;
 import com.bank_management_system.transactions.Transaction;
 
@@ -15,7 +16,6 @@ public abstract class Account implements Transactable {
     private final Customer customer;
     private double balance;
     private String status;
-    private final List<Transaction> transactionHistory = new ArrayList<>();
 
     private static int accountCounter = 1;
 
@@ -26,41 +26,43 @@ public abstract class Account implements Transactable {
         this.status = "Active";
     }
 
+    // getter methods
     public String getAccountNumber(){ return accountNumber; }
     public Customer getCustomer(){ return customer; }
     public String getCustomerName(){ return customer.getName();}
     public String getCustomerId(){ return customer.getCustomerId();}
     public double getBalance(){ return balance; }
     public String getStatus(){ return status;}
-    public List<Transaction> getTransactions() {
-        return Collections.unmodifiableList(transactionHistory);
-    }
-    
+
+
+    // abstract methods
     public abstract void displayAccountDetails();
     public abstract String getAccountType();
-    protected abstract void validateWithdrawal(double amount) throws InsufficientFundsException;
+    protected abstract void validateWithdrawal(double amount);
 
+    // financial operations
     public final Transaction deposit(double amount){
+        if ("Closed".equalsIgnoreCase(this.status)) {
+            throw new IllegalStateException("Cannot deposit into a closed account.");
+        }
+
         if ( amount <= 0){
             throw new InvalidAmountException("Deposit must be greater than zero");
         }
         balance += amount;
-        Transaction transaction = new Transaction(accountNumber, "DEPOSIT", amount, balance);
-        transactionHistory.add(transaction);
-        return transaction;
+        return new Transaction(accountNumber, "DEPOSIT", amount, balance);
     }
 
-    public final Transaction withdraw(double amount) throws InvalidAmountException, InsufficientFundsException{
-
+    public final Transaction withdraw(double amount){
+        if ("Closed".equalsIgnoreCase(this.status)) {
+            throw new IllegalStateException("Cannot withdraw from a closed account.");
+        }
         if( amount <= 0){
             throw new InvalidAmountException("Withdrawal amount must be greater than zero.");
         }
         validateWithdrawal(amount);
         balance -= amount;
-
-        Transaction transaction = new Transaction(accountNumber, "WITHDRAWAL", amount, balance);
-        transactionHistory.add(transaction);
-        return transaction;
+        return new Transaction(accountNumber, "WITHDRAWAL", amount, balance);
     }
 
     @Override
@@ -86,6 +88,12 @@ public abstract class Account implements Transactable {
     public String toString() {
         return String.format("[%s] %s Account | Owner: %s | Balance: $%,.2f | Status: %s",
                 accountNumber, getAccountType(), customer.getName(), balance, status);
+    }
+
+
+    // additional method to disable account
+    public void closeAccount() {
+        this.status = "Closed"; // Usually, you'd also set balance to 0 and transfer it elsewhere
     }
     
 }

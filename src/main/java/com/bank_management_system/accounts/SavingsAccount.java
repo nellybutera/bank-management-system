@@ -4,13 +4,12 @@ import com.bank_management_system.shared.InsufficientFundsException;
 
 public class SavingsAccount extends Account{
 
-    private double interestRate;
-    private double minimumBalance;
+    private final double interestRate;
+    public static final double minimumBalance = 500.0;
 
     public SavingsAccount(Customer customer, double balance){
         super(customer, balance);
         interestRate = 0.035;
-        minimumBalance = 500;
     }
 
     public double calculateInterest(){
@@ -18,7 +17,7 @@ public class SavingsAccount extends Account{
     }
 
     public double getInterestRate(){ return interestRate; }
-    public double getMinimumBalance(){ return minimumBalance; }
+    public static double getMinimumBalance(){ return minimumBalance; }
 
     @Override
     public void displayAccountDetails() {
@@ -34,7 +33,7 @@ public class SavingsAccount extends Account{
     }
 
     @Override
-    protected void validateWithdrawal(double amount) throws InsufficientFundsException{
+    protected void validateWithdrawal(double amount){
         if (getBalance() - amount < minimumBalance){
             throw new InsufficientFundsException(String.format(
                     "Withdrawal denied. Savings account must maintain a minimum balance of $%.2f. " +

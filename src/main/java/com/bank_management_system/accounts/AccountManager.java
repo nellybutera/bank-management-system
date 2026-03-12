@@ -27,7 +27,7 @@ public class AccountManager {
     }
 
 
-    public Account findAccountOrThrow(String accountNumber) throws AccountNotFoundException {
+    public Account findAccountOrThrow(String accountNumber){
         Account account = findAccount(accountNumber);
         if (account == null) {
             throw new AccountNotFoundException("Account not found: " + accountNumber);
