@@ -306,9 +306,7 @@ public class BankController {
     }
 
     private void printMenu() {
-        System.out.println("\n----------------------------------------------");
-        System.out.println("|         BANK ACCOUNT MANAGEMENT            |");
-        System.out.println("|              MAIN MENU                     |");
+        System.out.println("                MAIN MENU                     ");
         System.out.println("----------------------------------------------");
         System.out.println("  1. Create Account");
         System.out.println("  2. View Accounts");
