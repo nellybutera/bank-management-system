@@ -62,7 +62,7 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 |---|---|---|
 | `BankController` | Controller | Main menu loop (8 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, exit. |
 | `InputReader` | I/O helper | Wraps `Scanner`; provides validated reads for strings, menu choices, amounts, and positive integers with automatic re-prompt on invalid input. |
-| `DataInitializer` | Bootstrap utility | Populates the system with 5 sample customers and 5 sample accounts on startup. |
+| `DataInitializer` | Bootstrap utility | Populates the system with 5 sample customers and 6 sample accounts on startup (Michael Chen holds two accounts to demonstrate multi-account customers). |
 | `Main` | Entry point | Wires all dependencies together (manual DI) and launches `BankController.start()`. |
 
 ### Shared Utilities
@@ -118,7 +118,7 @@ Main.main()
   ├─ new CustomerService(bank)
   ├─ new InputReader()
   ├─ DataInitializer.initializeSampleData(accountService, customerService)
-  │     └─ creates 5 customers + 5 accounts via the service layer
+  │     └─ creates 5 customers + 6 accounts via the service layer
   └─ new BankController(...).start()   ← enters the menu loop
 ```
 
@@ -131,15 +131,24 @@ Main.main()
 ```
 BankController.handleCreateAccount()
   │
-  ├─[1] InputReader collects: name, age, contact, address, customer type, account type, initial balance
+  ├─[1] "Is this an existing customer? (Y/N)"
   │
-  ├─[2] CustomerService.registerRegularCustomer()  (or registerPremiumCustomer())
-  │       ├─ validateInput()          ← checks no empty strings
-  │       ├─ new RegularCustomer()    ← auto-assigns CUST00N id
-  │       └─ Bank.addCustomer()       ← stored in HashMap<customerId, Customer>
-  │
+  ├─[PATH A — existing customer]
+  │     ├─ InputReader reads: Customer ID
+  │     ├─ customerService.getAllCustomers().stream().filter(id match).findFirst()
+  │     │     └─ not found → printError(), return early
+  │     └─ customer resolved ─────────────────────────────────────────┐
+  │                                                                    │
+  ├─[PATH B — new customer]                                           │
+  │     ├─ InputReader collects: name, age, contact, address, type    │
+  │     ├─ CustomerService.registerRegularCustomer()                  │
+  │     │     ├─ validateInput()       ← checks no empty strings      │
+  │     │     ├─ new RegularCustomer() ← auto-assigns CUST00N id      │
+  │     │     └─ Bank.addCustomer()    ← stored in HashMap            │
+  │     └─ customer resolved ─────────────────────────────────────────┤
+  │                                                                    │
   └─[3] AccountService.createSavingsAccount()  (or createCheckingAccount())
-          ├─ Bank.findCustomerById()            ← retrieve the Customer just created
+          ├─ Bank.findCustomerById()            ← retrieve Customer object
           ├─ Validate minimum deposit           ← $500 Savings / $0 Checking
           ├─ new SavingsAccount(customer, balance)
           │     └─ Account constructor auto-assigns ACC00N id
@@ -147,7 +156,10 @@ BankController.handleCreateAccount()
           └─ Customer.addAccount()              ← account linked to its owner
 ```
 
-**Key design point:** `AccountService` is the only class that touches both `AccountManager` and `Customer.addAccount()`. This keeps the two registries (the manager's array and the customer's personal list) in sync without any class other than the service knowing about both.
+**Key design points:**
+- Both paths converge at the same `AccountService` call — no duplication of account creation logic.
+- An existing customer can now accumulate multiple accounts over time, matching the reality that `Customer.accounts` is an `ArrayList` (not a fixed single slot).
+- `AccountService` remains the only class that writes to both `AccountManager` and `Customer.addAccount()`, keeping the two registries in sync.
 
 ---
 
@@ -287,15 +299,27 @@ sequenceDiagram
 
     %% --- Account Creation ---
     User->>BC: Select "Create Account"
-    BC->>IR: Collect name, age, contact, address, types, balance
-    IR-->>BC: Raw input
-    BC->>CS: registerRegularCustomer(...)
-    CS->>CS: validateInput()
-    CS->>C: new RegularCustomer()
-    CS->>B: addCustomer(customer)
-    B-->>CS: stored
-    CS-->>BC: customer
+    BC->>IR: "Is this an existing customer? (Y/N)"
+    IR-->>BC: choice
 
+    alt Existing customer
+        BC->>IR: Collect Customer ID
+        IR-->>BC: customerId
+        BC->>CS: getAllCustomers() → stream filter by ID
+        CS-->>BC: customer (or null → error + return)
+    else New customer
+        BC->>IR: Collect name, age, contact, address, customer type
+        IR-->>BC: raw input
+        BC->>CS: registerRegularCustomer(...)
+        CS->>CS: validateInput()
+        CS->>C: new RegularCustomer()
+        CS->>B: addCustomer(customer)
+        B-->>CS: stored
+        CS-->>BC: customer
+    end
+
+    BC->>IR: Collect account type, initial balance
+    IR-->>BC: raw input
     BC->>AS: createSavingsAccount(customerId, balance)
     AS->>B: findCustomerById(customerId)
     B-->>AS: customer

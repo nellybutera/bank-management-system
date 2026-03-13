@@ -137,27 +137,64 @@ public class BankController {
     private void handleCreateAccount() {
         System.out.println("\n--- ACCOUNT CREATION ---");
 
-        // Collect customer details
-        System.out.print("Enter customer name    : ");
-        String name = inputReader.nextLine();
+        // Determine if existing or new customer
+        System.out.print("Is this an existing customer? (Y/N): ");
+        String existingChoice = inputReader.nextLine();
 
-        System.out.print("Enter customer age     : ");
-        int age = inputReader.readPositiveInt("age");
+        Customer customer;
 
-        System.out.print("Enter customer contact : ");
-        String contact = inputReader.nextLine();
+        if (existingChoice.equalsIgnoreCase("Y")) {
+            System.out.print("Enter Customer ID (e.g. CUST001): ");
+            String customerId = inputReader.nextLine();
 
-        System.out.print("Enter customer address : ");
-        String address = inputReader.nextLine();
+            customer = customerService.getAllCustomers().stream()
+                    .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
+                    .findFirst()
+                    .orElse(null);
 
-        // Customer type
-        System.out.println("\nCustomer type:");
-        System.out.println("  1. Regular Customer (Standard banking services)");
-        System.out.println("  2. Premium Customer (Enhanced benefits, min balance $10,000)");
-        System.out.print("Select type (1-2): ");
-        int customerType = inputReader.readMenuChoice(1, 2);
+            if (customer == null) {
+                printError("Customer not found: " + customerId);
+                inputReader.pressEnterToContinue();
+                return;
+            }
 
-        // Account type
+            System.out.printf("%nFound: %s (%s)%n", customer.getName(), customer.getCustomerType());
+
+        } else {
+            // Collect customer details
+            System.out.print("Enter customer name    : ");
+            String name = inputReader.nextLine();
+
+            System.out.print("Enter customer age     : ");
+            int age = inputReader.readPositiveInt("age");
+
+            System.out.print("Enter customer contact : ");
+            String contact = inputReader.nextLine();
+
+            System.out.print("Enter customer address : ");
+            String address = inputReader.nextLine();
+
+            // Customer type
+            System.out.println("\nCustomer type:");
+            System.out.println("  1. Regular Customer (Standard banking services)");
+            System.out.println("  2. Premium Customer (Enhanced benefits, min balance $10,000)");
+            System.out.print("Select type (1-2): ");
+            int customerType = inputReader.readMenuChoice(1, 2);
+
+            try {
+                if (customerType == 1) {
+                    customer = customerService.registerRegularCustomer(name, age, contact, address);
+                } else {
+                    customer = customerService.registerPremiumCustomer(name, age, contact, address);
+                }
+            } catch (Exception e) {
+                printError(e.getMessage());
+                inputReader.pressEnterToContinue();
+                return;
+            }
+        }
+
+        // Account type — same for both paths
         System.out.println("\nAccount type:");
         System.out.printf("  1. Savings Account  (Interest: %.1f%%, Min Balance: $%.2f)%n", 3.5, 500.00);
         System.out.printf("  2. Checking Account (Overdraft: $%,.2f, Monthly Fee: $%.2f)%n", 1_000.00, 10.00);
@@ -168,15 +205,6 @@ public class BankController {
         double initialBalance = inputReader.readAmount();
 
         try {
-            // Register customer
-            Customer customer;
-            if (customerType == 1) {
-                customer = customerService.registerRegularCustomer(name, age, contact, address);
-            } else {
-                customer = customerService.registerPremiumCustomer(name, age, contact, address);
-            }
-
-            // Create account
             Account account;
             if (accountType == 1) {
                 account = accountService.createSavingsAccount(customer.getCustomerId(), initialBalance);
