@@ -35,7 +35,7 @@ public class TransactionManager {
         System.out.println("  " + "-".repeat(80));
 
         // newest first
-        for (int i = transactionCount - 1; i >= 0; i--) {
+        for (int i = transactionCount - 1; i >= 0; i--) { // this backwards loop ensures newest transactions are shown first
             if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
                 transactions[i].displayTransactionDetails();
             }

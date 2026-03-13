@@ -16,7 +16,12 @@ public class Main {
         CustomerService    customerService    = new CustomerService(bank);
         InputReader        inputReader        = new InputReader();
 
-        DataInitializer.initializeSampleData(accountService, customerService);
+        try {
+            DataInitializer.initializeSampleData(accountService, customerService);
+        } catch (Exception e) {
+            System.err.println("Failed to load sample data: " + e.getMessage());
+            return;
+        }
 
         BankController controller = new BankController(accountService, customerService, inputReader);
         controller.start();

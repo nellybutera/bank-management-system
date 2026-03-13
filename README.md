@@ -16,9 +16,9 @@ A console-based Java application that simulates core banking operations — crea
 
 ## Features
 
-On startup the application pre-loads five sample customers and accounts. From the main menu a user (bank staff) can:
+On startup the application pre-loads five sample customers and six accounts (Michael Chen has both a Checking and a Savings account). From the main menu a user (bank staff) can:
 
-1. **Create Account** — register a new Regular or Premium customer, choose a Savings or Checking account, and set an initial deposit
+1. **Create Account** — open an account for an existing customer by ID, or register a brand-new Regular or Premium customer; choose a Savings or Checking account and set an initial deposit
 2. **View Accounts** — display all accounts in a formatted table with balances and a bank-wide total
 3. **Process Transaction** — deposit or withdraw from any account with a confirmation prompt before execution
 4. **View Transaction History** — show all transactions for an account newest-first, with a deposit/withdrawal/net summary
