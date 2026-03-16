@@ -64,6 +64,21 @@ public class AccountService {
         transactionManager.addTransaction(transaction);
     }
 
+    // unified transaction entry point — routes to deposit or withdrawal and logs the result
+    public void processTransaction(String accountNumber, double amount, String type){
+        Account account = accountManager.findAccountOrThrow(accountNumber);
+        Transaction transaction;
+        if ("DEPOSIT".equalsIgnoreCase(type)) {
+            transaction = account.deposit(amount);
+        } else if ("WITHDRAWAL".equalsIgnoreCase(type)) {
+            transaction = account.withdraw(amount);
+        } else {
+            throw new com.bank_management_system.shared.IllegalArgumentException(
+                    "Invalid transaction type: " + type + ". Must be DEPOSIT or WITHDRAWAL.");
+        }
+        transactionManager.addTransaction(transaction);
+    }
+
     // this returns the account details for a given account number
     public Account getAccountDetails(String accountNumber){
         return accountManager.findAccountOrThrow(accountNumber);
@@ -102,7 +117,7 @@ public class AccountService {
         Account[] accounts = accountManager.getAccounts();
         int count = 0;
         for (Account account : accounts) {
-            if (account instanceof CheckingAccount ca) {
+            if (account instanceof CheckingAccount ca && account.getStatus().equalsIgnoreCase("Active")) {
                 Transaction transaction = ca.applyMonthlyFee();
                 if (transaction != null) {
                     transactionManager.addTransaction(transaction);

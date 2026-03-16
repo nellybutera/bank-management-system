@@ -84,7 +84,7 @@ Again, `Account` is abstract. You must create a `SavingsAccount` or a `CheckingA
 
 The `AccountManager` is like a physical filing cabinet with 50 slots. It holds all the accounts in the whole bank.
 
-When you create a new account, it gets added to a slot. When you look up an account by number (`ACC003`), the program searches through the cabinet one slot at a time until it finds it. This is called a **linear search**.
+When you create a new account, it gets added to a slot. When you look up an account by number (`ACC003`), the program searches through the cabinet one slot at a time until it finds it. If it reaches the end without finding it, it immediately throws an error rather than returning nothing — this is called **fail-fast**. The search itself is called a **linear search**.
 
 ### The Filing Cabinet for Customers (`Bank`)
 
@@ -123,11 +123,14 @@ When you want to create an account, the officer:
 3. Puts it in the `AccountManager` cabinet.
 4. Also links it to the customer's own list of accounts.
 
-When you want to deposit money, the officer:
-1. Finds the account in the `AccountManager`.
-2. Tells the account object to add the money (the account does its own math).
-3. Takes the receipt (`Transaction` object) that the account produces.
-4. Writes it in the ledger (`TransactionManager`).
+When you want to process a transaction, the officer handles everything through one method — `processTransaction()`:
+1. Checks that the type is either DEPOSIT or WITHDRAWAL (rejects anything else immediately).
+2. Finds the account in the `AccountManager`.
+3. Tells the account object to add or subtract the money (the account does its own math).
+4. Takes the receipt (`Transaction` object) that the account produces.
+5. Writes it in the ledger (`TransactionManager`).
+
+This means the receptionist (`BankController`) only needs to make one call — not two separate ones for deposits and withdrawals.
 
 Notice: the officer never does the math themselves. They hand off the deposit to the `Account` object, which knows the rules. The officer's job is coordination, not calculation.
 
@@ -213,7 +216,8 @@ AccountService finds the account in AccountManager
 You are shown a confirmation: "Deposit $200 into ACC001 — confirm?"
 
 If you say yes:
-  AccountService tells the Account to deposit/withdraw
+  BankController calls AccountService.processTransaction(accountNumber, amount, type)
+  AccountService routes to deposit or withdrawal, then:
   Account checks:
     - Is the account open?          (if closed → error)
     - Is the amount positive?       (if not → error)
