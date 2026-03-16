@@ -46,14 +46,14 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 | Class | Type | Responsibility |
 |---|---|---|
 | `Bank` | Repository | `HashMap<String, Customer>` — the master customer registry; provides O(1) lookup by customer ID. |
-| `AccountManager` | Repository | Fixed array of up to 50 `Account` objects; provides `findAccount()` (nullable), `findAccountOrThrow()` (exception), and `getAccounts()` (returns a copy of the used slice for iteration). |
+| `AccountManager` | Repository | Fixed array of up to 50 `Account` objects; provides `findAccountOrThrow()` (throws `AccountNotFoundException` if not found) and `getAccounts()` (returns a copy of the used slice for iteration). |
 | `TransactionManager` | Ledger / SSOT | Fixed array of up to 200 `Transaction` records; appends every financial event and exposes per-account history, deposit totals, and withdrawal totals. |
 
 ### Service Layer
 
 | Class | Type | Responsibility |
 |---|---|---|
-| `AccountService` | Orchestrator | The single entry point for all account and financial operations. Coordinates `Bank`, `AccountManager`, and `TransactionManager`. Exposes: account creation, deposit/withdraw, close account (soft delete), `applyMonthlyFees()` (batch fee deduction for all non-waived checking accounts), and `applyInterest()` (batch interest credit for all active savings accounts). |
+| `AccountService` | Orchestrator | The single entry point for all account and financial operations. Coordinates `Bank`, `AccountManager`, and `TransactionManager`. Exposes: account creation, `processTransaction()` (unified deposit/withdrawal entry point), close account (soft delete), `applyMonthlyFees()` (batch fee deduction for all non-waived checking accounts), and `applyInterest()` (batch interest credit for all active savings accounts). |
 | `CustomerService` | Orchestrator | Validates and creates `RegularCustomer` / `PremiumCustomer` objects, then registers them in `Bank`. |
 
 ### Presentation / I/O Layer
@@ -178,9 +178,9 @@ BankController.handleProcessTransaction()
   │
   ├─[3] User confirms the transaction
   │
-  └─[4] AccountService.deposit(accountNumber, amount)
-          │    OR
-          AccountService.withdraw(accountNumber, amount)
+  └─[4] AccountService.processTransaction(accountNumber, amount, txnType)
+                │
+                ├─ Guard: type must be "DEPOSIT" or "WITHDRAWAL"  (IllegalArgumentException)
                 │
                 ├─ AccountManager.findAccountOrThrow()       ← retrieve live Account object
                 │
@@ -196,7 +196,7 @@ BankController.handleProcessTransaction()
                 └─ TransactionManager.addTransaction(transaction)   ← appended to Transaction[]
 ```
 
-**Key design point:** The `Account` object is the single place where balance arithmetic happens — `AccountService` never mutates `balance` directly. After the math is done and a `Transaction` is produced, `AccountService` hands it to `TransactionManager`, which becomes the permanent, immutable record of what occurred.
+**Key design point:** `BankController` makes a single call to `AccountService.processTransaction()` for all financial operations — it never calls `deposit()` or `withdraw()` directly. `AccountService.processTransaction()` owns the routing (DEPOSIT vs WITHDRAWAL), finding the account, executing the operation, and logging the result. The `Account` object is still the only place where balance arithmetic happens; `AccountService` coordinates without doing the math itself.
 
 ---
 
@@ -332,10 +332,10 @@ sequenceDiagram
     User->>BC: Select "Process Transaction"
     BC->>IR: Read accountNumber, type, amount
     IR-->>BC: input
-    BC->>AS: deposit(accountNumber, amount)
+    BC->>AS: processTransaction(accountNumber, amount, type)
     AS->>AM: findAccountOrThrow(accountNumber)
     AM-->>AS: account
-    AS->>Acc: deposit(amount)
+    AS->>Acc: deposit(amount) or withdraw(amount)
     Acc->>Acc: validate & update balance
     Acc-->>AS: Transaction object
     AS->>TM: addTransaction(transaction)
@@ -509,19 +509,20 @@ this.accountNumber = String.format("ACC%03d", ++accountCounter);
 
 #### Linear Search
 
-**Where:** `AccountManager.findAccount(String accountNumber)` and `findAccountOrThrow()`.
+**Where:** `AccountManager.findAccountOrThrow(String accountNumber)`.
 
 ```
 for (int i = 0; i < accountCount; i++) {
     if (accounts[i].getAccountNumber().equals(accountNumber)) {
-        return accounts[i];
+        return accounts[i];   // early exit on match
     }
 }
+throw new AccountNotFoundException("Account not found: " + accountNumber);
 ```
 
 **DSA concept:** A **sequential / linear search** — O(n) time, O(1) space. The algorithm scans from index 0 until a match is found or the used portion of the array is exhausted. With a maximum of 50 accounts this is perfectly efficient; a binary search or hash map would add complexity with no meaningful gain at this scale.
 
-**`findAccount` vs `findAccountOrThrow`:** Two variants of the same search — one returns `null` on miss (used when the caller wants to check existence), the other throws `AccountNotFoundException` (used when the account *must* exist and absence is an error). This is the **Null Object vs Exception** decision pattern.
+**Early-exit / fail-fast:** The `return` inside the loop is a hard exit — the moment a match is found, the method is done. If the loop completes without returning, the `throw` fires. There is no `else` branch needed; `return` and `throw` are both terminators, so code after them in the same path can never run. This is a **guard clause** pattern: establish success early, throw at the bottom as the failure sentinel.
 
 ---
 
@@ -615,7 +616,7 @@ The system contains two registries that serve similar purposes but use different
 | Read-only list wrapper | Defensive copy / immutable view | `Customer.getAccounts()` |
 | Append-only records | Write-ahead log / event log | `TransactionManager.transactions` |
 | Static auto-increment | Sequence generator | `Account`, `Customer`, `Transaction` constructors |
-| Sequential scan | Linear search O(n) | `AccountManager.findAccount()` |
+| Sequential scan | Linear search O(n) | `AccountManager.findAccountOrThrow()` |
 | Bottom-up iteration | Reverse traversal / stack-order | `TransactionManager.viewTransactionsByAccount()` |
 | Filter + sum | Reduce / fold | `TransactionManager.calculateTotalDeposits/Withdrawals()` |
 | Pre-condition chain | Guard clauses / fail-fast | `Account.deposit()`, `Account.withdraw()` |

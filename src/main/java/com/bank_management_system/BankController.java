@@ -98,11 +98,7 @@ public class BankController {
             }
 
             // Execute
-            if (type == 1) {
-                accountService.deposit(accNum, amount);
-            } else {
-                accountService.withdraw(accNum, amount);
-            }
+            accountService.processTransaction(accNum, amount, txnType);
 
             System.out.println("\nTransaction completed successfully!");
 

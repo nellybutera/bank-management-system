@@ -110,7 +110,7 @@ src/main/java/com/bank_management_system/
 | Fixed-size array | `AccountManager` (50 slots), `TransactionManager` (200 slots) | O(1) append |
 | Dynamic array (ArrayList) | `Customer.accounts` — grows per customer | O(1) amortised append |
 | Hash map | `Bank.customers` keyed by customer ID | O(1) average lookup |
-| Linear search | `AccountManager.findAccount()` | O(n) |
+| Linear search | `AccountManager.findAccountOrThrow()` | O(n) |
 | Reverse traversal | `TransactionManager.viewTransactionsByAccount()` — newest-first display | O(n) |
 | Filter + accumulate | `calculateTotalDeposits()` / `calculateTotalWithdrawals()` | O(n) |
 | Guard clauses (fail-fast) | `Account.deposit()` / `withdraw()` — validate before mutating | O(1) checks |

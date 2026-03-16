@@ -18,22 +18,13 @@ public class AccountManager {
         accounts[accountCount++] = account;
     }
 
-    public Account findAccount(String accountNumber) {
+    public Account findAccountOrThrow(String accountNumber) {
         for (int i = 0; i < accountCount; i++) {
             if (accounts[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
                 return accounts[i];
             }
         }
-        return null;
-    }
-
-
-    public Account findAccountOrThrow(String accountNumber){
-        Account account = findAccount(accountNumber);
-        if (account == null) {
-            throw new AccountNotFoundException("Account not found: " + accountNumber);
-        }
-        return account;
+        throw new AccountNotFoundException("Account not found: " + accountNumber);
     }
 
     public void viewAllAccounts() {
