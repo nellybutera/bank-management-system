@@ -1,3 +1,4 @@
+
 # Bank Management System — Architecture Documentation
 
 ---
