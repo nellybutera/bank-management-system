@@ -28,12 +28,9 @@ public final class Transaction{
         this.timestamp = LocalDateTime.now().format(formatedDateTime);
     }
 
-    public String getTransactionId(){ return transactionId; }
     public String getAccountNumber(){ return accountNumber; }
     public String getType(){ return type; }
     public double getAmount(){ return amount; }
-    public double getBalanceAfter(){ return balanceAfter; }
-    public String getTimestamp(){ return timestamp; }
 
     /**
      * Displays a formatted one-line summary matching the task doc format:
@@ -57,19 +54,4 @@ public final class Transaction{
     };
 
 
-    // public static void main(String[] args){
-    //     System.out.println("ID     | Timestamp           | TYPE       | AMOUNT       | BALANCE");
-    //     System.out.println("--------------------------------------------------------------------------");
-
-    //     Transaction t1 = new Transaction("123456", "DEPOSIT", 1500.00, 6750.00);
-    //     t1.displayTransactionDetails();
-
-    //     // Test 2: A Withdrawal (Notice how the ID auto-increments to TXN002)
-    //     Transaction t2 = new Transaction("123456", "WITHDRAWAL", 750.00, 5250.00);
-    //     t2.displayTransactionDetails();
-
-    //     // Test 3: Another Deposit
-    //     Transaction t3 = new Transaction("123456", "DEPOSIT", 2000.00, 7250.00);
-    //     t3.displayTransactionDetails();
-    // }
 }

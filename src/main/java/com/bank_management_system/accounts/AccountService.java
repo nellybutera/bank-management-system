@@ -50,20 +50,6 @@ public class AccountService {
         return account;
     }
 
-    // deposit method (financial operation)
-    public void deposit(String accountNumber, double amount){
-        Account account = accountManager.findAccountOrThrow(accountNumber);
-        Transaction transaction = account.deposit(amount);
-        transactionManager.addTransaction(transaction);
-    }
-
-    // withdrawal method
-    public void withdraw(String accountNumber, double amount){
-        Account account = accountManager.findAccountOrThrow(accountNumber);
-        Transaction transaction = account.withdraw(amount);
-        transactionManager.addTransaction(transaction);
-    }
-
     // unified transaction entry point — routes to deposit or withdrawal and logs the result
     public void processTransaction(String accountNumber, double amount, String type){
         Account account = accountManager.findAccountOrThrow(accountNumber);
@@ -90,10 +76,6 @@ public class AccountService {
         transactionManager.viewTransactionsByAccount(accountNumber);
     }
 
-    // // exposes the accountmanager class so that Main can call viewAllAccounts() directly;
-    // public AccountManager getAccountManager(){
-    //     return accountManager;
-    // }
 
     // method to view accounts in main
     public void displayAllAccounts(){
