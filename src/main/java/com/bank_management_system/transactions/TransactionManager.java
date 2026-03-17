@@ -72,8 +72,5 @@ public class TransactionManager {
         }
         return total;
     }
-
-    public int getTransactionCount() {
-        return transactionCount;
-    }
+    
 }

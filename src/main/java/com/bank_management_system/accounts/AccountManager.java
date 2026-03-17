@@ -57,10 +57,6 @@ public class AccountManager {
     }
 
 
-    public int getAccountCount() {
-        return accountCount;
-    }
-
     public Account[] getAccounts() {
         return Arrays.copyOf(accounts, accountCount);
     }
