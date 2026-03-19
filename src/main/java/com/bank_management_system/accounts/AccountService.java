@@ -2,8 +2,8 @@ package com.bank_management_system.accounts;
 
 import com.bank_management_system.bank.Bank;
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.shared.InvalidAmountException;
-import com.bank_management_system.shared.IllegalStateException;
+import com.bank_management_system.exceptions.IllegalStateException;
+import com.bank_management_system.exceptions.InvalidAmountException;
 import com.bank_management_system.transactions.Transaction;
 import com.bank_management_system.transactions.TransactionManager;
 
@@ -71,7 +71,7 @@ public class AccountService {
      * @param accountNumber the account to transact on
      * @param amount        the transaction amount
      * @param type          "DEPOSIT" or "WITHDRAWAL"
-     * @throws com.bank_management_system.shared.IllegalArgumentException if the type is unrecognised
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if the type is unrecognised
      */
     public void processTransaction(String accountNumber, double amount, String type) {
         Account account = accountManager.findAccountOrThrow(accountNumber);
@@ -82,7 +82,7 @@ public class AccountService {
         } else if ("WITHDRAWAL".equalsIgnoreCase(type)) {
             transaction = account.withdraw(amount);
         } else {
-            throw new com.bank_management_system.shared.IllegalArgumentException(
+            throw new com.bank_management_system.exceptions.IllegalArgumentException(
                     "Invalid transaction type: " + type + ". Must be DEPOSIT or WITHDRAWAL.");
         }
 

@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.shared.AccountNotFoundException;
+import com.bank_management_system.exceptions.AccountNotFoundException;
 
 public class Bank {
     private final Map<String, Customer> customers = new HashMap<>();

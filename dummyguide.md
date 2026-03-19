@@ -502,11 +502,11 @@ The three main things Mockito does in this project:
 
 | File | Tests | What it checks |
 |---|---|---|
-| `AccountTest.java` | 13 tests | `deposit()` and `withdraw()` directly — balance updates, exception conditions, overdraft rules |
-| `TransactionManagerTest.java` | 7 tests | Transaction recording and totals — proves the ledger stores and sums correctly |
-| `AccountServiceTest.java` | 10 tests | `AccountService` coordination — uses Mockito to verify it calls the right dependencies the right number of times |
+| `AccountTest.java` | 8 tests | `deposit()` and `withdraw()` directly — balance updates, exception conditions, overdraft rules |
+| `TransactionManagerTest.java` | 4 tests | Transaction recording and totals — proves the ledger stores and sums correctly |
+| `AccountServiceTest.java` | 5 tests (Mockito) | `AccountService` coordination — uses Mockito to verify it calls the right dependencies the right number of times |
 
-Run all 30 tests with: `mvn test`
+Run all 17 tests with: `mvn test`
 
 ---
 

@@ -1,4 +1,4 @@
-package com.bank_management_system.shared;
+package com.bank_management_system.exceptions;
 
 public class InvalidAmountException extends RuntimeException{ // this makes this class a checked exception that must be handled by the caller
     

@@ -48,7 +48,7 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 |---|---|---|
 | `Bank` | Repository | `HashMap<String, Customer>` — the master customer registry; provides O(1) lookup by customer ID. |
 | `AccountManager` | Repository | Fixed array of up to `MAX_ACCOUNTS` (50) `Account` objects; provides `findAccountOrThrow()` (throws `AccountNotFoundException` if not found) and `getAccounts()` (returns a copy of the used slice for iteration). |
-| `TransactionManager` | Ledger / SSOT | Fixed array of up to `MAX_TRANSACTIONS` (200) `Transaction` records; appends every financial event. `viewTransactionsByAccount()` is broken into four private helpers — `countMatchingTransactions()`, `printTransactionTable()`, `printTransactionSummary()`, and `sumByTransactionType()` — keeping each method under 25 lines. `calculateTotalDeposits()` and `calculateTotalWithdrawals()` both delegate to `sumByTransactionType()` to eliminate duplicate logic. |
+| `TransactionManager` | Ledger / SSOT | Fixed array of up to `MAX_TRANSACTIONS` (200) `Transaction` records; appends every financial event. `viewTransactionsByAccount()` is broken into four private helpers — `countMatchingTransactions()`, `printTransactionTable()`, `printTransactionSummary()`, and `sumByTransactionType()` — keeping each method under 25 lines. `printTransactionTable()` collects matching transactions into a `List`, sorts by `Transaction.createdAt` descending, and prints newest-first. Accounts with no transactions print a graceful "No transactions found" message and return early. Net change in the summary correctly shows `+$` or `-$` based on sign. `calculateTotalDeposits()` and `calculateTotalWithdrawals()` both delegate to `sumByTransactionType()` to eliminate duplicate logic. |
 
 ### Service Layer
 
@@ -61,7 +61,7 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 
 | Class | Type | Responsibility |
 |---|---|---|
-| `BankController` | Controller | Main menu loop (8 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, exit. Long handlers (`handleProcessTransaction`, `handleCreateAccount`) are broken into private helper methods (`printAccountSummary`, `readTransactionType`, `readTransactionAmount`, `confirmTransaction`, `lookUpExistingCustomer`, `registerNewCustomer`, `openAccount`, `printAccountCreatedConfirmation`) to keep every method under 25 lines. Calls `InputValidator.validateAccountNumber()` and `validateCustomerId()` before passing IDs to the service layer. |
+| `BankController` | Controller | Main menu loop (9 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, run tests, exit. Long handlers (`handleProcessTransaction`, `handleCreateAccount`) are broken into private helper methods (`printAccountSummary`, `readTransactionType`, `readTransactionAmount`, `confirmTransaction`, `lookUpExistingCustomer`, `registerNewCustomer`, `openAccount`, `printAccountCreatedConfirmation`) to keep every method under 25 lines. Calls `InputValidator.validateAccountNumber()` and `validateCustomerId()` before passing IDs to the service layer. |
 | `InputReader` | I/O helper | Wraps `Scanner`; provides validated reads for strings, menu choices, amounts, and positive integers with automatic re-prompt on invalid input. |
 | `DataInitializer` | Bootstrap utility | Populates the system with 5 sample customers and 6 sample accounts on startup (Michael Chen holds two accounts to demonstrate multi-account customers). |
 | `Main` | Entry point | Wires all dependencies together (manual DI) and launches `BankController.start()`. |
@@ -215,10 +215,11 @@ BankController.handleViewTransactionHistory()
   └─[2] AccountService.getTransactionHistory(accountNumber)
           ├─ AccountManager.findAccountOrThrow()       ← verify account exists
           └─ TransactionManager.viewTransactionsByAccount(accountNumber)
-                ├─ Iterates Transaction[] in reverse (newest first)
-                ├─ Filters by accountNumber
-                ├─ Calls Transaction.displayTransactionDetails() for each match
-                └─ Prints summary: total deposits, total withdrawals, net change
+                ├─ If no transactions found → prints "No transactions found" and returns
+                ├─ Collects matching transactions into a List<Transaction>
+                ├─ Sorts by Transaction.createdAt descending (newest first)
+                ├─ Calls Transaction.displayTransactionDetails() for each entry
+                └─ Prints summary: total deposits, total withdrawals, net change (±)
 ```
 
 ---
@@ -529,21 +530,25 @@ throw new AccountNotFoundException("Account not found: " + accountNumber);
 
 ---
 
-#### Reverse Traversal (Newest-First Display)
+#### Timestamp Sort (Newest-First Display)
 
-**Where:** `TransactionManager.viewTransactionsByAccount()`.
+**Where:** `TransactionManager.printTransactionTable()`.
 
 ```
-for (int i = transactionCount - 1; i >= 0; i--) {
-    if (transactions[i].getAccountNumber().equals(accountNumber)) {
-        transactions[i].displayTransactionDetails();
+List<Transaction> matching = new ArrayList<>();
+for (int i = 0; i < transactionCount; i++) {
+    if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
+        matching.add(transactions[i]);
     }
 }
+matching.sort(Comparator.comparing(Transaction::getCreatedAt).reversed());
 ```
 
-**DSA concept:** **Reverse iteration** over an array — traverses from the last used index down to 0. Because transactions are appended in chronological order, iterating in reverse yields the most recent record first. This gives the user a **newest-first / LIFO** view without any sorting or auxiliary data structure. Time complexity remains O(n); no extra memory is used.
+**DSA concept:** **Sort by comparator** — a two-step filter-then-sort pattern. First, a linear pass (O(n)) collects all transactions belonging to the account. Second, `List.sort()` applies a `Comparator` derived from `Transaction.createdAt` (a `LocalDateTime` field) in reversed order, giving O(n log n) total. The sort is stable, meaning transactions with the same millisecond timestamp preserve their insertion order.
 
-**Conceptual link:** This is equivalent to reading a **stack** from top to bottom — even though a stack is not used, the reverse iteration replicates its pop-order traversal.
+**Why sort instead of reverse-iterate?** The previous implementation relied on insertion order to achieve newest-first display — it worked as long as transactions were always appended chronologically. Explicit sorting by `createdAt` is correct regardless of insertion order, making the output reliable even if transactions were ever loaded from an external source or merged from another ledger.
+
+**Trade-off:** O(n log n) vs O(n) — negligible at `MAX_TRANSACTIONS` = 200, but the correctness gain is worth it.
 
 ---
 
@@ -620,7 +625,7 @@ The system contains two registries that serve similar purposes but use different
 | Append-only records | Write-ahead log / event log | `TransactionManager.transactions` |
 | Static auto-increment | Sequence generator | `Account`, `Customer`, `Transaction` constructors |
 | Sequential scan | Linear search O(n) | `AccountManager.findAccountOrThrow()` |
-| Bottom-up iteration | Reverse traversal / stack-order | `TransactionManager.viewTransactionsByAccount()` |
+| Sort by comparator | Timestamp sort / O(n log n) | `TransactionManager.printTransactionTable()` |
 | Filter + sum | Reduce / fold | `TransactionManager.sumByTransactionType()` |
 | Pre-condition chain | Guard clauses / fail-fast | `Account.deposit()`, `Account.withdraw()` |
 | Abstract method override | Dynamic dispatch / Strategy | `validateWithdrawal()`, `getAccountType()` |
@@ -751,96 +756,36 @@ All Mockito usage is in `AccountServiceTest`. `@ExtendWith(MockitoExtension.clas
 
 ### 9.5 Test Coverage Summary
 
-**`AccountTest` — 14 tests**
+> **17 tests total** — run with `mvn test`.
 
-> Total tests across all files: **72** — run with `mvn test`.
+**`AccountTest` — 8 tests**
 
 | Test method | What it verifies |
 |---|---|
 | `depositUpdatesBalance` | Balance increases by the deposited amount |
-| `depositReturnsTransactionRecord` | Returns a non-null `Transaction` with correct type, amount, and account number |
 | `depositZeroThrowsInvalidAmountException` | Zero deposit is rejected |
-| `depositNegativeThrowsInvalidAmountException` | Negative deposit is rejected |
 | `depositToClosedAccountThrowsIllegalStateException` | Deposit into a closed account is blocked |
 | `withdrawUpdatesBalance` | Balance decreases by the withdrawn amount |
-| `withdrawReturnsTransactionRecord` | Returns a non-null `Transaction` with correct type, amount, and account number |
-| `withdrawExactMinimumBalanceAllowed` | Withdrawing down to exactly the minimum balance succeeds |
 | `withdrawBelowMinimumThrowsException` | Withdrawal that would breach the $500 minimum is rejected |
-| `withdrawZeroThrowsInvalidAmountException` | Zero withdrawal is rejected |
 | `withdrawFromClosedAccountThrowsIllegalStateException` | Withdrawal from a closed account is blocked |
 | `overdraftWithinLimitAllowed` | Checking account balance may go negative within the $1,000 overdraft limit |
-| `overdraftExceedThrowsOverdraftLimitExceededException` | Withdrawal that would exceed the overdraft limit throws `OverdraftLimitExceededException` specifically |
-| `overdraftLimitExceededIsSubtypeOfInsufficientFunds` | `OverdraftLimitExceededException` is a subtype of `InsufficientFundsException` — inheritance hierarchy is correct |
+| `overdraftExceedThrowsOverdraftLimitExceededException` | Withdrawal that exceeds the overdraft limit throws `OverdraftLimitExceededException` |
 
-**`TransactionManagerTest` — 7 tests**
+**`TransactionManagerTest` — 4 tests**
 
 | Test method | What it verifies |
 |---|---|
 | `addTransactionRecordsDeposit` | A logged deposit appears in `calculateTotalDeposits()` |
-| `addTransactionRecordsWithdrawal` | A logged withdrawal appears in `calculateTotalWithdrawals()` |
 | `calculateTotalDepositsAggregatesMultiple` | Multiple deposits are summed correctly |
-| `calculateTotalWithdrawalsAggregatesMultiple` | Multiple withdrawals are summed correctly |
 | `depositsMinusWithdrawalsEqualsNetBalanceChange` | Ledger totals match the actual balance change on the account (SSOT consistency) |
 | `calculateTotalDepositsReturnsZeroForUnknownAccount` | Querying a non-existent account returns 0, not an error |
-| `transactionLinkedToCorrectAccount` | The `Transaction` object carries the account number it was created for |
 
-**`InputValidatorTest` — 35 tests**
-
-| Test method | What it verifies |
-|---|---|
-| `validNamePasses` | A normal full name clears the regex |
-| `nameWithApostrophePasses` | Apostrophes are allowed (e.g. O'Brien) |
-| `nameWithHyphenPasses` | Hyphens are allowed (e.g. Mary-Jane) |
-| `blankNameThrowsException` | Blank/whitespace-only name is rejected |
-| `nameWithDigitsThrowsException` | Digits in a name are rejected |
-| `nameWithSpecialCharsThrowsException` | Symbols in a name are rejected |
-| `validAgePasses` | A normal age within range clears the check |
-| `minimumAgePasses` | Age 18 is on the boundary — must pass |
-| `maximumAgePasses` | Age 120 is on the boundary — must pass |
-| `ageBelowMinimumThrowsException` | Age 17 is below the minimum — rejected |
-| `ageAboveMaximumThrowsException` | Age 121 is above the maximum — rejected |
-| `validPhoneNumberPasses` | Standard format "555-1234" passes |
-| `internationalFormatPasses` | "+1 555-1234" (with leading +) passes |
-| `tooShortContactThrowsException` | Fewer than 7 characters rejected |
-| `lettersInContactThrowsException` | Letters in a phone number rejected |
-| `validAddressPasses` | "123 Main St, Springfield" passes |
-| `blankAddressThrowsException` | Blank address rejected |
-| `addressWithInvalidCharsThrowsException` | Special symbols in address rejected |
-| `validAccountNumberPasses` | "ACC001" passes |
-| `lowercaseAccountNumberPasses` | "acc001" passes — check is case-insensitive |
-| `accountNumberWrongPrefixThrowsException` | "AC001" (wrong prefix) rejected |
-| `accountNumberWithNoDigitsThrowsException` | "ACC" with no digits rejected |
-| `blankAccountNumberThrowsException` | Blank account number rejected |
-| `validCustomerIdPasses` | "CUST001" passes |
-| `lowercaseCustomerIdPasses` | "cust001" passes — check is case-insensitive |
-| `invalidCustomerIdPrefixThrowsException` | "CUS001" (wrong prefix) rejected |
-| `blankCustomerIdThrowsException` | Blank customer ID rejected |
-| `validAmountPasses` | Positive amount passes |
-| `zeroAmountThrowsInvalidAmountException` | Zero amount throws `InvalidAmountException` |
-| `negativeAmountThrowsInvalidAmountException` | Negative amount throws `InvalidAmountException` |
-| `validMenuChoicePasses` | Choice within range passes |
-| `minimumMenuChoicePasses` | Choice equal to min is on the boundary — passes |
-| `maximumMenuChoicePasses` | Choice equal to max is on the boundary — passes |
-| `choiceBelowMinThrowsException` | Choice below min rejected |
-| `choiceAboveMaxThrowsException` | Choice above max rejected |
-
-**`AccountServiceTest` — 16 tests (Mockito)**
+**`AccountServiceTest` — 5 tests (Mockito)**
 
 | Test method | What it verifies |
 |---|---|
 | `depositLogsTransactionInLedger` | `addTransaction()` is called exactly once on the mocked ledger after a deposit |
-| `withdrawalLogsTransactionInLedger` | `addTransaction()` is called exactly once after a withdrawal |
-| `invalidTransactionTypeThrowsIllegalArgumentException` | Unknown type throws exception; `addTransaction()` is never called |
 | `unknownAccountThrowsAccountNotFoundException` | `AccountNotFoundException` from the mock propagates out of `AccountService` |
-| `createSavingsAccountRegistersWithAccountManager` | `addAccount()` is called on the mocked `AccountManager` after successful creation |
 | `createSavingsAccountBelowMinimumThrowsException` | Balance below $500 throws `InvalidAmountException`; `addAccount()` is never called |
 | `createCheckingAccountWaivesFeeForPremiumCustomer` | Account created for a `PremiumCustomer` has `isFeesWaived() == true` |
-| `createCheckingAccountDoesNotWaiveFeeForRegularCustomer` | Account created for a `RegularCustomer` has `isFeesWaived() == false` |
 | `closeAccountWithNonZeroBalanceThrowsIllegalStateException` | Closing an account with a remaining balance is blocked |
-| `getTransactionHistoryCallsBothManagerAndLedger` | Both `findAccountOrThrow()` and `viewTransactionsByAccount()` are called exactly once |
-| `applyMonthlyFeesChargesNonWaivedCheckingAccount` | Fee is deducted and logged; count returns 1 |
-| `applyMonthlyFeesSkipsWaivedCheckingAccount` | Premium account is skipped; ledger untouched; count returns 0 |
-| `applyMonthlyFeesIgnoresSavingsAccounts` | SavingsAccount is not a CheckingAccount — ignored entirely |
-| `applyInterestCreditsSavingsAccount` | Interest deposit is logged; count returns 1 |
-| `applyInterestSkipsClosedSavingsAccount` | Closed account is skipped; ledger untouched; count returns 0 |
-| `applyInterestIgnoresCheckingAccounts` | CheckingAccount is not a SavingsAccount — ignored entirely |

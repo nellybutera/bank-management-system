@@ -1,8 +1,8 @@
 package com.bank_management_system.accounts;
 
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.shared.InsufficientFundsException;
-import com.bank_management_system.shared.OverdraftLimitExceededException;
+import com.bank_management_system.exceptions.InsufficientFundsException;
+import com.bank_management_system.exceptions.OverdraftLimitExceededException;
 import com.bank_management_system.transactions.Transaction;
 
 public class CheckingAccount extends Account {
