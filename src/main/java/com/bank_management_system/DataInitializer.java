@@ -12,11 +12,14 @@ public class DataInitializer {
 
     private DataInitializer() {}
 
-    // sample data
-    // sample data
-
+    /**
+     * Seeds the system with a set of predefined customers and accounts.
+     * Each registered customer is automatically added to the bank.
+     *
+     * @param accountService  the service used to create accounts
+     * @param customerService the service used to register customers
+     */
     public static void initializeSampleData(AccountService accountService, CustomerService customerService) {
-        // customerService.register already adds each customer to the bank
         RegularCustomer c1 = customerService.registerRegularCustomer("John Smith",    35, "555-1234", "123 Main St, Springfield");
         RegularCustomer c2 = customerService.registerRegularCustomer("Sarah Johnson", 28, "555-2345", "456 Oak Ave, Riverside");
         PremiumCustomer c3 = customerService.registerPremiumCustomer("Michael Chen",  42, "555-3456", "789 Pine Rd, Lakewood");
