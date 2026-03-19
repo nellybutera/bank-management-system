@@ -451,6 +451,65 @@ Every path money takes goes through `AccountService`, and every financial event 
 
 ---
 
+## Unit testing — how we know the code works
+
+### What is a unit test?
+
+A **unit test** is a small program that automatically checks one specific thing about your code. Instead of running the whole bank application and pressing buttons manually, you write tests that call individual methods and check whether the result is what you expected.
+
+For example, instead of:
+> "Run the app, create an account, go to Process Transaction, type in $200, confirm, then look at the balance and hope it says $1,200"
+
+You write:
+```
+savings.deposit(200);
+check that savings.getBalance() equals 1200
+```
+
+That check runs in milliseconds and will tell you immediately if something is wrong.
+
+---
+
+### JUnit — the testing framework
+
+**JUnit** is the tool that runs the tests and reports whether they passed or failed. Think of JUnit as a referee. Your test says "I expect X" and JUnit checks whether the code actually produced X. If it did — PASSED. If it didn't — FAILED, and it tells you exactly what went wrong.
+
+Every test method in this project is marked with `@Test` so JUnit knows to run it. `@BeforeEach` is a setup step that runs before every single test to create fresh objects — like resetting the board before each game.
+
+---
+
+### Mockito — the fake dependency tool
+
+Some classes depend on other classes to do their job. `AccountService`, for example, needs `Bank`, `AccountManager`, and `TransactionManager` to be up and running before it can do anything.
+
+When you test `AccountService`, you don't actually want to test whether `AccountManager` works at the same time — you only want to test whether `AccountService` itself is doing the right thing. If both break at the same time, it's impossible to tell which one caused the failure.
+
+**Mockito** solves this by creating **fakes** (called mocks) that pretend to be those dependencies. You tell the fake what to return when asked, and afterwards you can check whether `AccountService` called it the right way.
+
+Real-world analogy: imagine testing a waiter (AccountService). Instead of using a real kitchen (AccountManager), you use a fake kitchen that gives back whatever you tell it to. That way, if the test fails, you know the waiter made a mistake — not the kitchen.
+
+The three main things Mockito does in this project:
+
+| What | How | Plain-English meaning |
+|---|---|---|
+| Create a fake | `@Mock` | "Replace the real thing with a controllable fake" |
+| Tell the fake what to return | `when(...).thenReturn(...)` | "When someone asks this question, give back this answer" |
+| Check the fake was used | `verify(...)` | "Did the waiter actually place the order with the kitchen?" |
+
+---
+
+### The three test files
+
+| File | Tests | What it checks |
+|---|---|---|
+| `AccountTest.java` | 13 tests | `deposit()` and `withdraw()` directly — balance updates, exception conditions, overdraft rules |
+| `TransactionManagerTest.java` | 7 tests | Transaction recording and totals — proves the ledger stores and sums correctly |
+| `AccountServiceTest.java` | 10 tests | `AccountService` coordination — uses Mockito to verify it calls the right dependencies the right number of times |
+
+Run all 30 tests with: `mvn test`
+
+---
+
 ## Where to go next
 
 - Read `architecture.md` for the full technical version of everything explained here, including Mermaid sequence diagrams and complexity analysis.

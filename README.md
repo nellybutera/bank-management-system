@@ -25,7 +25,8 @@ On startup the application pre-loads five sample customers and six accounts (Mic
 5. **Close Account** — soft-delete an account (sets status to `Closed`; requires zero balance; preserves full transaction history)
 6. **Apply Monthly Fees & Interest** — batch operation: deducts $10 from non-waived Checking accounts and credits 3.5% interest to active Savings accounts; all movements are logged to the ledger
 7. **View Customer Accounts** — look up all accounts owned by a specific customer by ID
-8. **Exit** — close the application
+8. **Run Tests** — executes the full JUnit test suite via Maven and streams the formatted PASSED/FAILED results directly to the console
+9. **Exit** — close the application
 
 ---
 
@@ -143,6 +144,7 @@ All user input is validated before reaching the service layer via `InputValidato
 |---|---|
 | `AccountNotFoundException` | Account or customer ID does not exist |
 | `InsufficientFundsException` | Withdrawal would breach minimum balance or overdraft limit |
+| `OverdraftLimitExceededException` | Withdrawal on a Checking account would exceed the $1,000 overdraft limit (extends `InsufficientFundsException`) |
 | `InvalidAmountException` | Amount is zero or negative |
 | `IllegalArgumentException` | Invalid input — blank field, bad format, or out-of-range menu choice |
 | `IllegalStateException` | Operation attempted on a closed account |
@@ -191,3 +193,14 @@ git stash pop
 ### Why cherry-pick?
 
 Instead of merging the entire `feature/exceptions` branch (which would bring in unrelated history), cherry-pick selectively applies only the one commit that added the input validators — keeping `feature/refactor` focused on its own purpose.
+
+### Cherry-pick log
+
+| Commit | From branch | To branch | What it brought | Why |
+|---|---|---|---|---|
+| `58e273b` | `feature/exceptions` | `feature/refactor` | Try-catch blocks in BankController, CustomerService; InputValidator with regex validators | Brought input validation into the refactor branch without merging unrelated exception history |
+| `c392b8d` | `feature/refactor` | `feature/exceptions` | UPPER_SNAKE_CASE constants (`MAX_ACCOUNTS`, `MAX_TRANSACTIONS`), TransactionManager split into private helpers, `sumByTransactionType` DRY method | Tests need the refactored TransactionManager methods to exist on this branch |
+| `4776cf3` | `feature/refactor` | `feature/exceptions` | Javadoc on Account, AccountService, Bank, Customer, CheckingAccount, SavingsAccount, InputReader, DataInitializer | Completes Javadoc coverage across all classes used in the test suite |
+| `731b732` | `feature/refactor` | `feature/exceptions` | Javadoc on PremiumCustomer and RegularCustomer | Finishes the Javadoc pass for the full customer class hierarchy |
+| `9c0ad63` | `feature/refactor` | `feature/exceptions` | BankController refactored into helper methods (≤25 lines each), `validateAccountNumber` / `validateCustomerId` calls added | Brings the full validation flow onto this branch before integration testing |
+| `77a9103` | `feature/refactor` | `feature/exceptions` | README, architecture.md, dummyguide.md updated with refactoring and validation changes | Keeps documentation consistent across both branches at this point |
