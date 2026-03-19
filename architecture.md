@@ -47,21 +47,21 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 | Class | Type | Responsibility |
 |---|---|---|
 | `Bank` | Repository | `HashMap<String, Customer>` — the master customer registry; provides O(1) lookup by customer ID. |
-| `AccountManager` | Repository | Fixed array of up to 50 `Account` objects; provides `findAccountOrThrow()` (throws `AccountNotFoundException` if not found) and `getAccounts()` (returns a copy of the used slice for iteration). |
-| `TransactionManager` | Ledger / SSOT | Fixed array of up to 200 `Transaction` records; appends every financial event and exposes per-account history, deposit totals, and withdrawal totals. |
+| `AccountManager` | Repository | Fixed array of up to `MAX_ACCOUNTS` (50) `Account` objects; provides `findAccountOrThrow()` (throws `AccountNotFoundException` if not found) and `getAccounts()` (returns a copy of the used slice for iteration). |
+| `TransactionManager` | Ledger / SSOT | Fixed array of up to `MAX_TRANSACTIONS` (200) `Transaction` records; appends every financial event. `viewTransactionsByAccount()` is broken into four private helpers — `countMatchingTransactions()`, `printTransactionTable()`, `printTransactionSummary()`, and `sumByTransactionType()` — keeping each method under 25 lines. `calculateTotalDeposits()` and `calculateTotalWithdrawals()` both delegate to `sumByTransactionType()` to eliminate duplicate logic. |
 
 ### Service Layer
 
 | Class | Type | Responsibility |
 |---|---|---|
 | `AccountService` | Orchestrator | The single entry point for all account and financial operations. Coordinates `Bank`, `AccountManager`, and `TransactionManager`. Exposes: account creation, `processTransaction()` (unified deposit/withdrawal entry point), close account (soft delete), `applyMonthlyFees()` (batch fee deduction for all non-waived checking accounts), and `applyInterest()` (batch interest credit for all active savings accounts). |
-| `CustomerService` | Orchestrator | Validates and creates `RegularCustomer` / `PremiumCustomer` objects, then registers them in `Bank`. |
+| `CustomerService` | Orchestrator | Validates and creates `RegularCustomer` / `PremiumCustomer` objects, then registers them in `Bank`. Calls `InputValidator` to enforce all four field rules — name format, age range (18–120), contact number format, and address format — before any object is created. |
 
 ### Presentation / I/O Layer
 
 | Class | Type | Responsibility |
 |---|---|---|
-| `BankController` | Controller | Main menu loop (8 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, exit. |
+| `BankController` | Controller | Main menu loop (8 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, exit. Long handlers (`handleProcessTransaction`, `handleCreateAccount`) are broken into private helper methods (`printAccountSummary`, `readTransactionType`, `readTransactionAmount`, `confirmTransaction`, `lookUpExistingCustomer`, `registerNewCustomer`, `openAccount`, `printAccountCreatedConfirmation`) to keep every method under 25 lines. Calls `InputValidator.validateAccountNumber()` and `validateCustomerId()` before passing IDs to the service layer. |
 | `InputReader` | I/O helper | Wraps `Scanner`; provides validated reads for strings, menu choices, amounts, and positive integers with automatic re-prompt on invalid input. |
 | `DataInitializer` | Bootstrap utility | Populates the system with 5 sample customers and 6 sample accounts on startup (Michael Chen holds two accounts to demonstrate multi-account customers). |
 | `Main` | Entry point | Wires all dependencies together (manual DI) and launches `BankController.start()`. |
@@ -71,10 +71,11 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 | Class / Interface | Responsibility |
 |---|---|
 | `Transactable` (interface) | Contract (`processTransaction(double, String)`) that `Account` fulfils. |
-| `InputValidator` | Static validation helpers (name, amount, menu choice, ID). |
+| `InputValidator` | Static validation helpers. Provides eight validators: `validateName` (letters/spaces/hyphens/apostrophes only), `validateAge` (18–120), `validateContact` (7–15 digit phone format), `validateAddress` (letters, digits, spaces, commas, hyphens), `validateAccountNumber` (`ACC` + digits), `validateCustomerId` (`CUST` + digits), `validateAmount` (must be > 0), and `validateMenuChoice` (within displayed range). All throw `IllegalArgumentException` on failure. |
 | `InvalidAmountException` | Thrown for negative or zero monetary values. |
 | `InsufficientFundsException` | Thrown when a withdrawal would breach the minimum balance or overdraft limit. |
 | `AccountNotFoundException` | Thrown when a lookup by account / customer ID fails. |
+| `IllegalArgumentException` | Thrown when input fails format or range validation (blank field, wrong pattern, out-of-range menu choice). |
 | `IllegalStateException` | Thrown when an operation is attempted on a closed account. |
 
 ---
@@ -439,16 +440,16 @@ The system does not use a dedicated DSA library, but it applies several classic 
 
 #### Fixed-Size Array (Bounded Buffer)
 
-**Where:** `AccountManager.accounts` (capacity 50), `TransactionManager.transactions` (capacity 200).
+**Where:** `AccountManager.accounts` (capacity `MAX_ACCOUNTS` = 50), `TransactionManager.transactions` (capacity `MAX_TRANSACTIONS` = 200).
 
 ```
-Account[]     accounts     = new Account[50];      // AccountManager
-Transaction[] transactions = new Transaction[200]; // TransactionManager
+Account[]     accounts     = new Account[MAX_ACCOUNTS];          // AccountManager
+Transaction[] transactions = new Transaction[MAX_TRANSACTIONS];  // TransactionManager
 ```
 
 **DSA concept:** A **static/bounded array** paired with a manual integer index (`accountCount`, `transactionCount`) that tracks the next free slot. This is the same technique used to implement a **bounded buffer** or a **circular buffer** (without the wrap-around here). The index is incremented on every `addAccount()` / `addTransaction()` call; a capacity check before insertion prevents array overflow.
 
-**Trade-off vs ArrayList:** O(1) indexed access and zero resizing overhead, but the capacity is fixed at compile time. If more than 50 accounts are needed, the constant must be changed and recompiled.
+**Trade-off vs ArrayList:** O(1) indexed access and zero resizing overhead, but the capacity is fixed at compile time. If more than 50 accounts are needed, update `MAX_ACCOUNTS` and recompile.
 
 ---
 
@@ -547,20 +548,20 @@ for (int i = transactionCount - 1; i >= 0; i--) {
 
 #### Filter + Accumulate (Map-Reduce style)
 
-**Where:** `TransactionManager.calculateTotalDeposits()` and `calculateTotalWithdrawals()`.
+**Where:** `TransactionManager.calculateTotalDeposits()` and `calculateTotalWithdrawals()` — both delegate to the private `sumByTransactionType(accountNumber, type)` helper.
 
 ```
-// Pseudocode of what both methods do:
+// Pseudocode of sumByTransactionType:
 total = 0
 for each transaction in transactions[0..transactionCount]:
-    if transaction.accountNumber == target AND transaction.type == "DEPOSIT":
+    if transaction.accountNumber == target AND transaction.type == targetType:
         total += transaction.amount
 return total
 ```
 
-**DSA concept:** A **filter-then-accumulate** pass — a specific form of the general **reduce / fold** operation. The filter predicate is `accountNumber matches AND type matches`; the accumulator is a running sum. In functional programming this is `stream.filter(...).mapToDouble(...).sum()`. The explicit loop here does the same thing imperatively. Time complexity is O(n) per call; the two calls (deposits + withdrawals) make two full passes.
+**DSA concept:** A **filter-then-accumulate** pass — a specific form of the general **reduce / fold** operation. The filter predicate is `accountNumber matches AND type matches`; the accumulator is a running sum. In functional programming this is `stream.filter(...).mapToDouble(...).sum()`. The explicit loop here does the same thing imperatively. Time complexity is O(n) per call; the two calls (deposits + withdrawals) make two full passes. Extracting `sumByTransactionType` removes the duplicate loop that previously existed in both methods (DRY principle).
 
-**Optimisation note:** Both totals could be computed in a single pass with two accumulators. The current two-pass approach is clearer to read and adequate given the 200-transaction ceiling.
+**Optimisation note:** Both totals could be computed in a single pass with two accumulators. The current two-pass approach is clearer to read and adequate given the `MAX_TRANSACTIONS` = 200 ceiling.
 
 ---
 
@@ -619,6 +620,48 @@ The system contains two registries that serve similar purposes but use different
 | Static auto-increment | Sequence generator | `Account`, `Customer`, `Transaction` constructors |
 | Sequential scan | Linear search O(n) | `AccountManager.findAccountOrThrow()` |
 | Bottom-up iteration | Reverse traversal / stack-order | `TransactionManager.viewTransactionsByAccount()` |
-| Filter + sum | Reduce / fold | `TransactionManager.calculateTotalDeposits/Withdrawals()` |
+| Filter + sum | Reduce / fold | `TransactionManager.sumByTransactionType()` |
 | Pre-condition chain | Guard clauses / fail-fast | `Account.deposit()`, `Account.withdraw()` |
 | Abstract method override | Dynamic dispatch / Strategy | `validateWithdrawal()`, `getAccountType()` |
+
+---
+
+## 8. Code Quality Standards
+
+This project follows the **Google Java Style Guide** throughout.
+
+### 8.1 Constant Naming (UPPER_SNAKE_CASE)
+
+All `static final` constants use UPPER_SNAKE_CASE as required by the style guide:
+
+| Constant | Class | Value |
+|---|---|---|
+| `MAX_ACCOUNTS` | `AccountManager` | 50 |
+| `MAX_TRANSACTIONS` | `TransactionManager` | 200 |
+| `INTEREST_RATE` | `SavingsAccount` | 0.035 |
+| `MINIMUM_BALANCE` | `SavingsAccount` | 500.0 |
+| `OVERDRAFT_LIMIT` | `CheckingAccount` | 1000.0 |
+| `MONTHLY_FEE` | `CheckingAccount` | 10.0 |
+
+### 8.2 Javadoc Coverage
+
+Every public method across all classes carries a Javadoc comment describing its purpose, parameters (`@param`), and return value (`@return`) or exceptions thrown (`@throws`) where applicable. This applies to abstract methods, interface implementations, getters, and static utility methods.
+
+### 8.3 Method Length (≤ 25 lines)
+
+No public or private method exceeds 25 lines of executable code. Long handlers in `BankController` were decomposed into focused private helpers. `TransactionManager.viewTransactionsByAccount()` was split into four private methods. This keeps each method readable and testable in isolation.
+
+### 8.4 Input Validation
+
+All user-supplied strings are validated by `InputValidator` before they reach the service layer. Each rule is enforced with a regular expression and throws `IllegalArgumentException` on failure, which `BankController` catches and displays without crashing the menu loop.
+
+| Field | Validator method | Rule |
+|---|---|---|
+| Customer / account name | `validateName` | Letters, spaces, hyphens, apostrophes only |
+| Age | `validateAge` | 18–120 inclusive |
+| Contact number | `validateContact` | 7–15 characters: digits, spaces, `+`, `-`, `()` |
+| Address | `validateAddress` | Letters, digits, spaces, commas, periods, hyphens |
+| Account number | `validateAccountNumber` | Must match `ACC` + one or more digits |
+| Customer ID | `validateCustomerId` | Must match `CUST` + one or more digits |
+| Transaction amount | `validateAmount` | Must be greater than zero |
+| Menu choice | `validateMenuChoice` | Must be within the displayed range |

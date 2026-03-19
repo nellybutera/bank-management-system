@@ -120,6 +120,23 @@ src/main/java/com/bank_management_system/
 
 ---
 
+## Input Validation
+
+All user input is validated before reaching the service layer via `InputValidator`. Invalid input throws `IllegalArgumentException` immediately and is caught by the controller — the menu loop always continues.
+
+| Field | Rule |
+|---|---|
+| Customer / account name | Letters, spaces, hyphens, and apostrophes only — no digits or symbols |
+| Age | Must be between 18 and 120 |
+| Contact number | 7–15 characters; digits, spaces, `+`, `-`, `()` only |
+| Address | Letters, digits, spaces, commas, hyphens — covers "123 Main St, Springfield" |
+| Account number input | Must match `ACC` + digits (e.g. `ACC001`) |
+| Customer ID input | Must match `CUST` + digits (e.g. `CUST001`) |
+| Amount | Must be greater than zero |
+| Menu choice | Must be within the displayed range |
+
+---
+
 ## Custom Exceptions
 
 | Exception | When it is thrown |
@@ -127,5 +144,50 @@ src/main/java/com/bank_management_system/
 | `AccountNotFoundException` | Account or customer ID does not exist |
 | `InsufficientFundsException` | Withdrawal would breach minimum balance or overdraft limit |
 | `InvalidAmountException` | Amount is zero or negative |
-| `IllegalArgumentException` | Blank input field or out-of-range menu choice |
+| `IllegalArgumentException` | Invalid input — blank field, bad format, or out-of-range menu choice |
 | `IllegalStateException` | Operation attempted on a closed account |
+
+---
+
+## Git Workflow
+
+This project uses **feature branches** and **cherry-pick** to move tested changes selectively between branches.
+
+### Branch structure
+
+```bash
+main                  # stable, production-ready code
+feature/exceptions    # custom exception handling and input validation
+feature/refactor      # clean code, Javadoc, and formatting standards
+```
+
+### Common commands used
+
+```bash
+# Create and switch to a new feature branch
+git checkout -b feature/refactor
+
+# Stage specific files for a focused commit
+git add src/main/java/com/bank_management_system/transactions/TransactionManager.java
+
+# Commit with a descriptive message
+git commit -m "renamed constants to UPPER_SNAKE_CASE and broke down long methods into smaller ones"
+
+# View commit history on the current branch
+git log --oneline
+
+# Cherry-pick a specific commit from another branch into the current one
+git cherry-pick <commit-hash>
+
+# Example: bring the exceptions commit from feature/exceptions into feature/refactor
+git cherry-pick 58e273b
+
+# Stash uncommitted changes before a cherry-pick to avoid conflicts
+git stash
+git cherry-pick <commit-hash>
+git stash pop
+```
+
+### Why cherry-pick?
+
+Instead of merging the entire `feature/exceptions` branch (which would bring in unrelated history), cherry-pick selectively applies only the one commit that added the input validators — keeping `feature/refactor` focused on its own purpose.
