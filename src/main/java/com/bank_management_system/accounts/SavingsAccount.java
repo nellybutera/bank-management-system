@@ -1,24 +1,44 @@
 package com.bank_management_system.accounts;
+
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.shared.InsufficientFundsException;
 
-public class SavingsAccount extends Account{
+public class SavingsAccount extends Account {
 
     private final double interestRate;
     public static final double minimumBalance = 500.0;
 
-    public SavingsAccount(Customer customer, double balance){
+    public SavingsAccount(Customer customer, double balance) {
         super(customer, balance);
         interestRate = 0.035;
     }
 
-    public double calculateInterest(){
+    /**
+     * Calculates the interest amount due based on the current balance and interest rate.
+     *
+     * @return the interest amount to be credited
+     */
+    public double calculateInterest() {
         return getBalance() * interestRate;
     }
 
-    public double getInterestRate(){ return interestRate; }
-    public static double getMinimumBalance(){ return minimumBalance; }
+    /**
+     * Returns the annual interest rate applied to this account.
+     *
+     * @return the interest rate as a decimal (e.g. 0.035 for 3.5%)
+     */
+    public double getInterestRate() { return interestRate; }
 
+    /**
+     * Returns the minimum balance that must be maintained in a Savings account.
+     *
+     * @return the minimum balance amount
+     */
+    public static double getMinimumBalance() { return minimumBalance; }
+
+    /**
+     * Prints a formatted one-line summary of this account's details.
+     */
     @Override
     public void displayAccountDetails() {
         System.out.printf("  %-8s | %-20s | Savings  | $%,12.2f | %s%n",
@@ -27,20 +47,21 @@ public class SavingsAccount extends Account{
                 interestRate * 100, minimumBalance);
     }
 
+    /**
+     * Returns the account type label.
+     *
+     * @return "Savings"
+     */
     @Override
-    public String getAccountType(){
-        return "Savings";
-    }
+    public String getAccountType() { return "Savings"; }
 
     @Override
-    protected void validateWithdrawal(double amount){
-        if (getBalance() - amount < minimumBalance){
+    protected void validateWithdrawal(double amount) {
+        if (getBalance() - amount < minimumBalance) {
             throw new InsufficientFundsException(String.format(
                     "Withdrawal denied. Savings account must maintain a minimum balance of $%.2f. " +
                     "Current balance: $%.2f, requested: $%.2f.",
                     minimumBalance, getBalance(), amount));
         }
     }
-
-    
 }
