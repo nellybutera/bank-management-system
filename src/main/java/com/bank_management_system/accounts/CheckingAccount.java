@@ -2,6 +2,7 @@ package com.bank_management_system.accounts;
 
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.shared.InsufficientFundsException;
+import com.bank_management_system.shared.OverdraftLimitExceededException;
 import com.bank_management_system.transactions.Transaction;
 
 public class CheckingAccount extends Account {
@@ -56,10 +57,10 @@ public class CheckingAccount extends Account {
     }
 
     @Override
-    protected void validateWithdrawal(double amount) throws InsufficientFundsException {
+    protected void validateWithdrawal(double amount) throws OverdraftLimitExceededException {
         if (getBalance() - amount < -overdraftLimit) {
-            throw new InsufficientFundsException(String.format(
-                    "Withdrawal denied. Checking account has exceeded overdraft limit of $%.2f. %n " +
+            throw new OverdraftLimitExceededException(String.format(
+                    "Withdrawal denied. Overdraft limit of $%.2f exceeded. " +
                     "Current balance: $%.2f, requested: $%.2f.",
                     overdraftLimit, getBalance(), amount));
         }
