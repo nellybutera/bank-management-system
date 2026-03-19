@@ -6,6 +6,7 @@ import com.bank_management_system.accounts.CheckingAccount;
 import com.bank_management_system.accounts.SavingsAccount;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
+import com.bank_management_system.shared.InputValidator;
 
 // UI Controller for the Bank Management System.
 // Drives the main menu loop and delegates to service layer methods.
@@ -61,6 +62,7 @@ public class BankController {
         String accNum = inputReader.nextLine();
 
         try {
+            InputValidator.validateAccountNumber(accNum);
             Account account = accountService.getAccountDetails(accNum);
 
             // Show account details
@@ -114,6 +116,7 @@ public class BankController {
         String accNum = inputReader.nextLine();
 
         try {
+            InputValidator.validateAccountNumber(accNum);
             Account account = accountService.getAccountDetails(accNum);
 
             // Account header
@@ -139,68 +142,63 @@ public class BankController {
 
         Customer customer;
 
-        if (existingChoice.equalsIgnoreCase("Y")) {
-            System.out.print("Enter Customer ID (e.g. CUST001): ");
-            String customerId = inputReader.nextLine();
+        try {
+            if (existingChoice.equalsIgnoreCase("Y")) {
+                System.out.print("Enter Customer ID (e.g. CUST001): ");
+                String customerId = inputReader.nextLine();
+                InputValidator.validateCustomerId(customerId);
 
-            customer = customerService.getAllCustomers().stream()
-                    .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
-                    .findFirst()
-                    .orElse(null);
+                customer = customerService.getAllCustomers().stream()
+                        .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
+                        .findFirst()
+                        .orElse(null);
 
-            if (customer == null) {
-                printError("Customer not found: " + customerId);
-                inputReader.pressEnterToContinue();
-                return;
-            }
+                if (customer == null) {
+                    printError("Customer not found: " + customerId);
+                    inputReader.pressEnterToContinue();
+                    return;
+                }
 
-            System.out.printf("%nFound: %s (%s)%n", customer.getName(), customer.getCustomerType());
+                System.out.printf("%nFound: %s (%s)%n", customer.getName(), customer.getCustomerType());
 
-        } else {
-            // Collect customer details
-            System.out.print("Enter customer name    : ");
-            String name = inputReader.nextLine();
+            } else {
+                // Collect customer details
+                System.out.print("Enter customer name    : ");
+                String name = inputReader.nextLine();
 
-            System.out.print("Enter customer age     : ");
-            int age = inputReader.readPositiveInt("age");
+                System.out.print("Enter customer age     : ");
+                int age = inputReader.readPositiveInt("age");
 
-            System.out.print("Enter customer contact : ");
-            String contact = inputReader.nextLine();
+                System.out.print("Enter customer contact : ");
+                String contact = inputReader.nextLine();
 
-            System.out.print("Enter customer address : ");
-            String address = inputReader.nextLine();
+                System.out.print("Enter customer address : ");
+                String address = inputReader.nextLine();
 
-            // Customer type
-            System.out.println("\nCustomer type:");
-            System.out.println("  1. Regular Customer (Standard banking services)");
-            System.out.println("  2. Premium Customer (Enhanced benefits, min balance $10,000)");
-            System.out.print("Select type (1-2): ");
-            int customerType = inputReader.readMenuChoice(1, 2);
+                // Customer type
+                System.out.println("\nCustomer type:");
+                System.out.println("  1. Regular Customer (Standard banking services)");
+                System.out.println("  2. Premium Customer (Enhanced benefits, min balance $10,000)");
+                System.out.print("Select type (1-2): ");
+                int customerType = inputReader.readMenuChoice(1, 2);
 
-            try {
                 if (customerType == 1) {
                     customer = customerService.registerRegularCustomer(name, age, contact, address);
                 } else {
                     customer = customerService.registerPremiumCustomer(name, age, contact, address);
                 }
-            } catch (Exception e) {
-                printError(e.getMessage());
-                inputReader.pressEnterToContinue();
-                return;
             }
-        }
 
-        // Account type — same for both paths
-        System.out.println("\nAccount type:");
-        System.out.printf("  1. Savings Account  (Interest: %.1f%%, Min Balance: $%.2f)%n", 3.5, 500.00);
-        System.out.printf("  2. Checking Account (Overdraft: $%,.2f, Monthly Fee: $%.2f)%n", 1_000.00, 10.00);
-        System.out.print("Select type (1-2): ");
-        int accountType = inputReader.readMenuChoice(1, 2);
+            // Account type — same for both paths
+            System.out.println("\nAccount type:");
+            System.out.printf("  1. Savings Account  (Interest: %.1f%%, Min Balance: $%.2f)%n", 3.5, 500.00);
+            System.out.printf("  2. Checking Account (Overdraft: $%,.2f, Monthly Fee: $%.2f)%n", 1_000.00, 10.00);
+            System.out.print("Select type (1-2): ");
+            int accountType = inputReader.readMenuChoice(1, 2);
 
-        System.out.print("Enter initial deposit amount: $");
-        double initialBalance = inputReader.readAmount();
+            System.out.print("Enter initial deposit amount: $");
+            double initialBalance = inputReader.readAmount();
 
-        try {
             Account account;
             if (accountType == 1) {
                 account = accountService.createSavingsAccount(customer.getCustomerId(), initialBalance);
@@ -239,6 +237,7 @@ public class BankController {
         String accNum = inputReader.nextLine();
 
         try {
+            InputValidator.validateAccountNumber(accNum);
             Account account = accountService.getAccountDetails(accNum);
 
             System.out.println("\nAccount Details:");
@@ -303,6 +302,7 @@ public class BankController {
         String customerId = inputReader.nextLine();
 
         try {
+            InputValidator.validateCustomerId(customerId);
             customerService.getAllCustomers().stream()
                     .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
                     .findFirst()
