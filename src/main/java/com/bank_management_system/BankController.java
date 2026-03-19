@@ -8,8 +8,10 @@ import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
 import com.bank_management_system.shared.InputValidator;
 
-// UI Controller for the Bank Management System.
-// Drives the main menu loop and delegates to service layer methods.
+/**
+ * UI Controller for the Bank Management System.
+ * Drives the main menu loop and delegates all business logic to the service layer.
+ */
 public class BankController {
 
     private final AccountService accountService;
@@ -22,6 +24,10 @@ public class BankController {
         this.inputReader     = inputReader;
     }
 
+    /**
+     * Starts the main menu loop, routing each user selection to the appropriate handler.
+     * Runs until the user chooses to exit.
+     */
     public void start() {
         printWelcome();
 
@@ -47,8 +53,7 @@ public class BankController {
         inputReader.close();
     }
 
-    // menu handlers
-    // menu handlers
+    // ── menu handlers ──────────────────────────────────────────────────────────
 
     private void handleViewAccounts() {
         System.out.println("\n--- ALL BANK ACCOUNTS ---");
@@ -64,44 +69,16 @@ public class BankController {
         try {
             InputValidator.validateAccountNumber(accNum);
             Account account = accountService.getAccountDetails(accNum);
+            printAccountSummary(account);
 
-            // Show account details
-            System.out.println("\nAccount Details:");
-            System.out.printf("Customer: %s | Account Type: %s | Current Balance: $%,.2f%n",
-                    account.getCustomerName(), account.getAccountType(), account.getBalance());
+            String txnType = readTransactionType();
+            double amount  = readTransactionAmount();
 
-            // Transaction type
-            System.out.println("\nTransaction type:");
-            System.out.println("  1. Deposit");
-            System.out.println("  2. Withdrawal");
-            System.out.print("Select type (1-2): ");
-            int type = inputReader.readMenuChoice(1, 2);
-
-            System.out.print("Enter amount: $");
-            double amount = inputReader.readAmount();
-
-            // Transaction preview
-            double previousBalance = account.getBalance();
-            double expectedBalance = (type == 1) ? previousBalance + amount : previousBalance - amount;
-            String txnType = (type == 1) ? "DEPOSIT" : "WITHDRAWAL";
-
-            System.out.println("\nTRANSACTION CONFIRMATION");
-            System.out.println("-".repeat(50));
-            System.out.printf("Account: %s | Type: %s%n", accNum, txnType);
-            System.out.printf("Amount: $%,.2f%n", amount);
-            System.out.printf("Previous Balance: $%,.2f | New Balance: $%,.2f%n", previousBalance, expectedBalance);
-            System.out.print("\nConfirm transaction? (Y/N): ");
-            String confirm = inputReader.nextLine();
-
-            if (!confirm.equalsIgnoreCase("Y")) {
-                System.out.println("Transaction cancelled.");
-                inputReader.pressEnterToContinue();
+            if (!confirmTransaction(accNum, txnType, amount, account.getBalance())) {
                 return;
             }
 
-            // Execute
             accountService.processTransaction(accNum, amount, txnType);
-
             System.out.println("\nTransaction completed successfully!");
 
         } catch (Exception e) {
@@ -119,7 +96,6 @@ public class BankController {
             InputValidator.validateAccountNumber(accNum);
             Account account = accountService.getAccountDetails(accNum);
 
-            // Account header
             System.out.println("\nAccount: " + accNum + " - " + account.getCustomerName());
             System.out.println("Account Type: " + account.getAccountType());
             System.out.printf("Current Balance: $%,.2f%n", account.getBalance());
@@ -135,95 +111,18 @@ public class BankController {
 
     private void handleCreateAccount() {
         System.out.println("\n--- ACCOUNT CREATION ---");
-
-        // Determine if existing or new customer
         System.out.print("Is this an existing customer? (Y/N): ");
         String existingChoice = inputReader.nextLine();
 
-        Customer customer;
-
         try {
-            if (existingChoice.equalsIgnoreCase("Y")) {
-                System.out.print("Enter Customer ID (e.g. CUST001): ");
-                String customerId = inputReader.nextLine();
-                InputValidator.validateCustomerId(customerId);
+            Customer customer = existingChoice.equalsIgnoreCase("Y")
+                    ? lookUpExistingCustomer()
+                    : registerNewCustomer();
 
-                customer = customerService.getAllCustomers().stream()
-                        .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
-                        .findFirst()
-                        .orElse(null);
+            if (customer == null) return;
 
-                if (customer == null) {
-                    printError("Customer not found: " + customerId);
-                    inputReader.pressEnterToContinue();
-                    return;
-                }
-
-                System.out.printf("%nFound: %s (%s)%n", customer.getName(), customer.getCustomerType());
-
-            } else {
-                // Collect customer details
-                System.out.print("Enter customer name    : ");
-                String name = inputReader.nextLine();
-
-                System.out.print("Enter customer age     : ");
-                int age = inputReader.readPositiveInt("age");
-
-                System.out.print("Enter customer contact : ");
-                String contact = inputReader.nextLine();
-
-                System.out.print("Enter customer address : ");
-                String address = inputReader.nextLine();
-
-                // Customer type
-                System.out.println("\nCustomer type:");
-                System.out.println("  1. Regular Customer (Standard banking services)");
-                System.out.println("  2. Premium Customer (Enhanced benefits, min balance $10,000)");
-                System.out.print("Select type (1-2): ");
-                int customerType = inputReader.readMenuChoice(1, 2);
-
-                if (customerType == 1) {
-                    customer = customerService.registerRegularCustomer(name, age, contact, address);
-                } else {
-                    customer = customerService.registerPremiumCustomer(name, age, contact, address);
-                }
-            }
-
-            // Account type — same for both paths
-            System.out.println("\nAccount type:");
-            System.out.printf("  1. Savings Account  (Interest: %.1f%%, Min Balance: $%.2f)%n", 3.5, 500.00);
-            System.out.printf("  2. Checking Account (Overdraft: $%,.2f, Monthly Fee: $%.2f)%n", 1_000.00, 10.00);
-            System.out.print("Select type (1-2): ");
-            int accountType = inputReader.readMenuChoice(1, 2);
-
-            System.out.print("Enter initial deposit amount: $");
-            double initialBalance = inputReader.readAmount();
-
-            Account account;
-            if (accountType == 1) {
-                account = accountService.createSavingsAccount(customer.getCustomerId(), initialBalance);
-            } else {
-                account = accountService.createCheckingAccount(customer.getCustomerId(), initialBalance);
-            }
-
-            // Confirmation
-            System.out.println("\nAccount created successfully!");
-            System.out.println("=".repeat(60));
-            System.out.println("Account Number: " + account.getAccountNumber());
-            System.out.printf("Customer: %s (%s) | Account Type: %s%n",
-                    customer.getName(), customer.getCustomerType(), account.getAccountType());
-            System.out.printf("Initial Balance: $%,.2f%n", account.getBalance());
-
-            if (account instanceof SavingsAccount sa) {
-                System.out.printf("Interest Rate: %.1f%% | Minimum Balance: $%.2f%n",
-                        sa.getInterestRate() * 100, SavingsAccount.getMinimumBalance());
-            } else if (account instanceof CheckingAccount ca) {
-                System.out.printf("Overdraft Limit: $1,000.00 | Monthly Fee: %s%n",
-                        ca.isFeesWaived() ? "$0.00 (WAIVED - Premium Customer)" : "$10.00");
-            }
-
-            System.out.println("Status: " + account.getStatus());
-            System.out.println("=".repeat(60));
+            Account account = openAccount(customer);
+            printAccountCreatedConfirmation(customer, account);
 
         } catch (Exception e) {
             printError(e.getMessage());
@@ -254,9 +153,7 @@ public class BankController {
             }
 
             System.out.print("\nPermanently close account " + accNum + "? This cannot be undone. (Y/N): ");
-            String confirm = inputReader.nextLine();
-
-            if (!confirm.equalsIgnoreCase("Y")) {
+            if (!inputReader.nextLine().equalsIgnoreCase("Y")) {
                 System.out.println("Account closure cancelled.");
                 inputReader.pressEnterToContinue();
                 return;
@@ -276,9 +173,8 @@ public class BankController {
         System.out.println("  - Deduct $10.00 monthly fee from all Checking accounts (where not waived)");
         System.out.println("  - Credit 3.5% interest to all active Savings accounts");
         System.out.print("\nProceed? (Y/N): ");
-        String confirm = inputReader.nextLine();
 
-        if (!confirm.equalsIgnoreCase("Y")) {
+        if (!inputReader.nextLine().equalsIgnoreCase("Y")) {
             System.out.println("Operation cancelled.");
             inputReader.pressEnterToContinue();
             return;
@@ -320,8 +216,128 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
-    // ui methods
-    // ui methods
+    // ── handleProcessTransaction helpers ───────────────────────────────────────
+
+    private void printAccountSummary(Account account) {
+        System.out.println("\nAccount Details:");
+        System.out.printf("Customer: %s | Account Type: %s | Current Balance: $%,.2f%n",
+                account.getCustomerName(), account.getAccountType(), account.getBalance());
+    }
+
+    private String readTransactionType() {
+        System.out.println("\nTransaction type:");
+        System.out.println("  1. Deposit");
+        System.out.println("  2. Withdrawal");
+        System.out.print("Select type (1-2): ");
+        int type = inputReader.readMenuChoice(1, 2);
+        return (type == 1) ? "DEPOSIT" : "WITHDRAWAL";
+    }
+
+    private double readTransactionAmount() {
+        System.out.print("Enter amount: $");
+        return inputReader.readAmount();
+    }
+
+    private boolean confirmTransaction(String accNum, String txnType, double amount, double previousBalance) {
+        double expectedBalance = "DEPOSIT".equals(txnType) ? previousBalance + amount : previousBalance - amount;
+
+        System.out.println("\nTRANSACTION CONFIRMATION");
+        System.out.println("-".repeat(50));
+        System.out.printf("Account: %s | Type: %s%n", accNum, txnType);
+        System.out.printf("Amount: $%,.2f%n", amount);
+        System.out.printf("Previous Balance: $%,.2f | New Balance: $%,.2f%n", previousBalance, expectedBalance);
+        System.out.print("\nConfirm transaction? (Y/N): ");
+
+        if (!inputReader.nextLine().equalsIgnoreCase("Y")) {
+            System.out.println("Transaction cancelled.");
+            inputReader.pressEnterToContinue();
+            return false;
+        }
+        return true;
+    }
+
+    // ── handleCreateAccount helpers ────────────────────────────────────────────
+
+    private Customer lookUpExistingCustomer() {
+        System.out.print("Enter Customer ID (e.g. CUST001): ");
+        String customerId = inputReader.nextLine();
+        InputValidator.validateCustomerId(customerId);
+
+        Customer customer = customerService.getAllCustomers().stream()
+                .filter(c -> c.getCustomerId().equalsIgnoreCase(customerId))
+                .findFirst()
+                .orElse(null);
+
+        if (customer == null) {
+            printError("Customer not found: " + customerId);
+            inputReader.pressEnterToContinue();
+            return null;
+        }
+
+        System.out.printf("%nFound: %s (%s)%n", customer.getName(), customer.getCustomerType());
+        return customer;
+    }
+
+    private Customer registerNewCustomer() {
+        System.out.print("Enter customer name    : ");
+        String name = inputReader.nextLine();
+
+        System.out.print("Enter customer age     : ");
+        int age = inputReader.readPositiveInt("age");
+
+        System.out.print("Enter customer contact : ");
+        String contact = inputReader.nextLine();
+
+        System.out.print("Enter customer address : ");
+        String address = inputReader.nextLine();
+
+        System.out.println("\nCustomer type:");
+        System.out.println("  1. Regular Customer (Standard banking services)");
+        System.out.println("  2. Premium Customer (Enhanced benefits, min balance $10,000)");
+        System.out.print("Select type (1-2): ");
+        int customerType = inputReader.readMenuChoice(1, 2);
+
+        return (customerType == 1)
+                ? customerService.registerRegularCustomer(name, age, contact, address)
+                : customerService.registerPremiumCustomer(name, age, contact, address);
+    }
+
+    private Account openAccount(Customer customer) {
+        System.out.println("\nAccount type:");
+        System.out.printf("  1. Savings Account  (Interest: %.1f%%, Min Balance: $%.2f)%n", 3.5, 500.00);
+        System.out.printf("  2. Checking Account (Overdraft: $%,.2f, Monthly Fee: $%.2f)%n", 1_000.00, 10.00);
+        System.out.print("Select type (1-2): ");
+        int accountType = inputReader.readMenuChoice(1, 2);
+
+        System.out.print("Enter initial deposit amount: $");
+        double initialBalance = inputReader.readAmount();
+
+        return (accountType == 1)
+                ? accountService.createSavingsAccount(customer.getCustomerId(), initialBalance)
+                : accountService.createCheckingAccount(customer.getCustomerId(), initialBalance);
+    }
+
+    private void printAccountCreatedConfirmation(Customer customer, Account account) {
+        System.out.println("\nAccount created successfully!");
+        System.out.println("=".repeat(60));
+        System.out.println("Account Number: " + account.getAccountNumber());
+        System.out.printf("Customer: %s (%s) | Account Type: %s%n",
+                customer.getName(), customer.getCustomerType(), account.getAccountType());
+        System.out.printf("Initial Balance: $%,.2f%n", account.getBalance());
+
+        if (account instanceof SavingsAccount sa) {
+            System.out.printf("Interest Rate: %.1f%% | Minimum Balance: $%.2f%n",
+                    sa.getInterestRate() * 100, SavingsAccount.getMinimumBalance());
+        } else if (account instanceof CheckingAccount ca) {
+            System.out.printf("Overdraft Limit: $1,000.00 | Monthly Fee: %s%n",
+                    ca.isFeesWaived() ? "$0.00 (WAIVED - Premium Customer)" : "$10.00");
+        }
+
+        System.out.println("Status: " + account.getStatus());
+        System.out.println("=".repeat(60));
+    }
+
+    // ── ui helpers ─────────────────────────────────────────────────────────────
 
     private void printWelcome() {
         System.out.println("==============================================");
@@ -344,7 +360,6 @@ public class BankController {
         System.out.print("Enter choice: ");
     }
 
-    // Prints a formatted error message.
     private void printError(String message) {
         System.out.println("\nERROR: " + message);
     }
