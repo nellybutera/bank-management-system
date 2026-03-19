@@ -1,23 +1,37 @@
 package com.bank_management_system.accounts;
-import com.bank_management_system.shared.AccountNotFoundException;
+
 import java.util.Arrays;
 
+import com.bank_management_system.exceptions.AccountNotFoundException;
 
 public class AccountManager {
-    private static final int max_accounts = 50;
 
-    private final Account[] accounts = new Account[max_accounts]; // Fixed-size array of accounts
-    private int accountCount = 0;                                  // Tracks how many slots are used
+    private static final int MAX_ACCOUNTS = 50;
 
+    private final Account[] accounts = new Account[MAX_ACCOUNTS];
+    private int accountCount = 0;
 
+    /**
+     * Adds a new account to the ledger.
+     *
+     * @param account the account to add
+     * @throws IllegalStateException if the maximum account capacity has been reached
+     */
     public void addAccount(Account account) {
-        if (accountCount >= max_accounts) {
+        if (accountCount >= MAX_ACCOUNTS) {
             throw new IllegalStateException(
-                    "Maximum account capacity of " + max_accounts + " reached.");
+                    "Maximum account capacity of " + MAX_ACCOUNTS + " reached.");
         }
         accounts[accountCount++] = account;
     }
 
+    /**
+     * Finds and returns an account by its account number.
+     *
+     * @param accountNumber the account number to search for
+     * @return the matching Account
+     * @throws AccountNotFoundException if no account with the given number exists
+     */
     public Account findAccountOrThrow(String accountNumber) {
         for (int i = 0; i < accountCount; i++) {
             if (accounts[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
@@ -27,6 +41,9 @@ public class AccountManager {
         throw new AccountNotFoundException("Account not found: " + accountNumber);
     }
 
+    /**
+     * Prints a formatted table of all accounts along with the combined bank balance.
+     */
     public void viewAllAccounts() {
         if (accountCount == 0) {
             System.out.println("  No accounts found.");
@@ -47,7 +64,11 @@ public class AccountManager {
                 accountCount, getTotalBalance());
     }
 
-
+    /**
+     * Returns the sum of balances across all accounts.
+     *
+     * @return total balance held by the bank
+     */
     public double getTotalBalance() {
         double total = 0;
         for (int i = 0; i < accountCount; i++) {
@@ -56,11 +77,11 @@ public class AccountManager {
         return total;
     }
 
-
-    public int getAccountCount() {
-        return accountCount;
-    }
-
+    /**
+     * Returns a copy of all currently stored accounts.
+     *
+     * @return array of active accounts
+     */
     public Account[] getAccounts() {
         return Arrays.copyOf(accounts, accountCount);
     }

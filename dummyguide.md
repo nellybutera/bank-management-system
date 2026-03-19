@@ -96,6 +96,12 @@ Looking someone up by their tab label is much faster than searching slot by slot
 
 Every time money moves — deposit or withdrawal — the bank writes it down in a ledger book. That ledger book is the `TransactionManager`, and each line in the book is a `Transaction` object.
 
+`TransactionManager` is broken into several focused helper methods so that no single method is too long to understand at a glance:
+- `countMatchingTransactions()` — counts how many entries belong to a given account
+- `printTransactionTable()` — prints each matching entry as a formatted row
+- `printTransactionSummary()` — prints the deposit/withdrawal/net totals at the bottom
+- `sumByTransactionType()` — the shared calculation used by both `calculateTotalDeposits()` and `calculateTotalWithdrawals()` to avoid writing the same loop twice
+
 A `Transaction` records:
 - which account was involved
 - whether it was a deposit or withdrawal
@@ -136,12 +142,14 @@ Notice: the officer never does the math themselves. They hand off the deposit to
 
 ### The Customer Registration Desk (`CustomerService`)
 
-`CustomerService` handles signing up new customers. Before creating anyone, it checks:
-- Is the name blank? (Reject.)
-- Is the contact number blank? (Reject.)
-- Is the address blank? (Reject.)
+`CustomerService` handles signing up new customers. Before creating anyone, it runs four checks using `InputValidator`:
 
-If everything looks good, it creates the customer and adds them to the `Bank` cabinet.
+- **Name** — must contain only letters, spaces, hyphens, or apostrophes. Numbers and symbols are rejected. (So "John Smith" passes but "J0hn$" does not.)
+- **Age** — must be between 18 and 120. Anything outside that range is rejected.
+- **Contact number** — must be a valid phone format: 7 to 15 characters, digits only plus optional `+`, `-`, spaces, or parentheses. (So "+1 555-1234" passes but "abc" does not.)
+- **Address** — must contain only letters, digits, spaces, commas, periods, or hyphens. (So "123 Main St, Springfield" passes.)
+
+If any check fails, `CustomerService` throws an error immediately and no customer is created. If everything looks good, it creates the customer and adds them to the `Bank` cabinet.
 
 ### The Receptionist (`BankController`)
 
@@ -163,7 +171,7 @@ When you run the program, `Main.java` runs first. Think of `Main` as the bank op
 2. It creates an empty `AccountManager` (account cabinet, 50 slots).
 3. It creates an empty `TransactionManager` (ledger, 200 pages).
 4. It creates an `AccountService` and a `CustomerService`, giving them access to those cabinets.
-5. It calls `DataInitializer`, which pre-fills the bank with 5 pretend customers and 5 accounts so there is something to see right away.
+5. It calls `DataInitializer`, which pre-fills the bank with 5 pretend customers and 6 accounts so there is something to see right away (Michael Chen has both a Checking and a Savings account).
 6. It creates `BankController` and tells it to start the menu loop.
 
 After step 6, the program sits and waits for you to press a key.
@@ -374,6 +382,29 @@ If any check fails, the program stops immediately and tells you what went wrong.
 
 ---
 
+## Input validation — catching bad data before it causes problems
+
+Before the program does anything with information you type, it runs it through a checklist called `InputValidator`. Think of it like a security guard at the front door who checks your ID before letting you in.
+
+Each rule is enforced the same way: if the input passes the check, the program continues. If it fails, the program throws an error, shows you what went wrong, and brings you back to the menu. Nothing is half-done.
+
+Here is what gets checked and why:
+
+| What you typed | What is checked | Why |
+|---|---|---|
+| A customer or account name | Letters, spaces, hyphens, apostrophes only — no digits or symbols | A real name like "O'Brien" should work; "H4x0r!" should not |
+| Age | Must be between 18 and 120 | Under 18 is too young to open an account; over 120 is not realistic |
+| Phone number | 7 to 15 characters; digits plus optional `+`, `-`, spaces, or brackets | Covers international formats like `+44 20 7946 0958` |
+| Address | Letters, digits, spaces, commas, periods, hyphens | Allows real addresses like `123 Main St, Springfield` |
+| Account number (e.g. to look one up) | Must start with `ACC` followed by digits | Catches typos like `AC001` or `ACC` with no number |
+| Customer ID (e.g. to view accounts) | Must start with `CUST` followed by digits | Same idea — catches format mistakes before a lookup is attempted |
+| Transaction amount | Must be greater than zero | You cannot deposit or withdraw $0 or a negative amount |
+| Menu choice | Must be one of the numbers shown | Typing `9` when the menu only goes to `8` is rejected immediately |
+
+The reason all of this is handled before the service layer sees the data is so that `AccountService` and `CustomerService` can trust what they receive. They do not need to add their own defensive checks on top — the validation already happened.
+
+---
+
 ## How all the files talk to each other — the simple picture
 
 ```
@@ -416,7 +447,66 @@ Every path money takes goes through `AccountService`, and every financial event 
 | `CheckingAccount` | An account with overdraft protection |
 | `Transaction` | One line written in the ledger |
 | `Transactable` | A promise that says "this object can process transactions" |
-| `InputValidator` | A checklist that validates inputs before they are used |
+| `InputValidator` | A checklist that validates name, age, contact, address, account number, customer ID, amount, and menu choice before any of them are used |
+
+---
+
+## Unit testing — how we know the code works
+
+### What is a unit test?
+
+A **unit test** is a small program that automatically checks one specific thing about your code. Instead of running the whole bank application and pressing buttons manually, you write tests that call individual methods and check whether the result is what you expected.
+
+For example, instead of:
+> "Run the app, create an account, go to Process Transaction, type in $200, confirm, then look at the balance and hope it says $1,200"
+
+You write:
+```
+savings.deposit(200);
+check that savings.getBalance() equals 1200
+```
+
+That check runs in milliseconds and will tell you immediately if something is wrong.
+
+---
+
+### JUnit — the testing framework
+
+**JUnit** is the tool that runs the tests and reports whether they passed or failed. Think of JUnit as a referee. Your test says "I expect X" and JUnit checks whether the code actually produced X. If it did — PASSED. If it didn't — FAILED, and it tells you exactly what went wrong.
+
+Every test method in this project is marked with `@Test` so JUnit knows to run it. `@BeforeEach` is a setup step that runs before every single test to create fresh objects — like resetting the board before each game.
+
+---
+
+### Mockito — the fake dependency tool
+
+Some classes depend on other classes to do their job. `AccountService`, for example, needs `Bank`, `AccountManager`, and `TransactionManager` to be up and running before it can do anything.
+
+When you test `AccountService`, you don't actually want to test whether `AccountManager` works at the same time — you only want to test whether `AccountService` itself is doing the right thing. If both break at the same time, it's impossible to tell which one caused the failure.
+
+**Mockito** solves this by creating **fakes** (called mocks) that pretend to be those dependencies. You tell the fake what to return when asked, and afterwards you can check whether `AccountService` called it the right way.
+
+Real-world analogy: imagine testing a waiter (AccountService). Instead of using a real kitchen (AccountManager), you use a fake kitchen that gives back whatever you tell it to. That way, if the test fails, you know the waiter made a mistake — not the kitchen.
+
+The three main things Mockito does in this project:
+
+| What | How | Plain-English meaning |
+|---|---|---|
+| Create a fake | `@Mock` | "Replace the real thing with a controllable fake" |
+| Tell the fake what to return | `when(...).thenReturn(...)` | "When someone asks this question, give back this answer" |
+| Check the fake was used | `verify(...)` | "Did the waiter actually place the order with the kitchen?" |
+
+---
+
+### The three test files
+
+| File | Tests | What it checks |
+|---|---|---|
+| `AccountTest.java` | 8 tests | `deposit()` and `withdraw()` directly — balance updates, exception conditions, overdraft rules |
+| `TransactionManagerTest.java` | 4 tests | Transaction recording and totals — proves the ledger stores and sums correctly |
+| `AccountServiceTest.java` | 5 tests (Mockito) | `AccountService` coordination — uses Mockito to verify it calls the right dependencies the right number of times |
+
+Run all 17 tests with: `mvn test`
 
 ---
 

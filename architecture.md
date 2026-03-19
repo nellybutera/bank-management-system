@@ -47,21 +47,21 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 | Class | Type | Responsibility |
 |---|---|---|
 | `Bank` | Repository | `HashMap<String, Customer>` — the master customer registry; provides O(1) lookup by customer ID. |
-| `AccountManager` | Repository | Fixed array of up to 50 `Account` objects; provides `findAccountOrThrow()` (throws `AccountNotFoundException` if not found) and `getAccounts()` (returns a copy of the used slice for iteration). |
-| `TransactionManager` | Ledger / SSOT | Fixed array of up to 200 `Transaction` records; appends every financial event and exposes per-account history, deposit totals, and withdrawal totals. |
+| `AccountManager` | Repository | Fixed array of up to `MAX_ACCOUNTS` (50) `Account` objects; provides `findAccountOrThrow()` (throws `AccountNotFoundException` if not found) and `getAccounts()` (returns a copy of the used slice for iteration). |
+| `TransactionManager` | Ledger / SSOT | Fixed array of up to `MAX_TRANSACTIONS` (200) `Transaction` records; appends every financial event. `viewTransactionsByAccount()` is broken into four private helpers — `countMatchingTransactions()`, `printTransactionTable()`, `printTransactionSummary()`, and `sumByTransactionType()` — keeping each method under 25 lines. `printTransactionTable()` collects matching transactions into a `List`, sorts by `Transaction.createdAt` descending, and prints newest-first. Accounts with no transactions print a graceful "No transactions found" message and return early. Net change in the summary correctly shows `+$` or `-$` based on sign. `calculateTotalDeposits()` and `calculateTotalWithdrawals()` both delegate to `sumByTransactionType()` to eliminate duplicate logic. |
 
 ### Service Layer
 
 | Class | Type | Responsibility |
 |---|---|---|
 | `AccountService` | Orchestrator | The single entry point for all account and financial operations. Coordinates `Bank`, `AccountManager`, and `TransactionManager`. Exposes: account creation, `processTransaction()` (unified deposit/withdrawal entry point), close account (soft delete), `applyMonthlyFees()` (batch fee deduction for all non-waived checking accounts), and `applyInterest()` (batch interest credit for all active savings accounts). |
-| `CustomerService` | Orchestrator | Validates and creates `RegularCustomer` / `PremiumCustomer` objects, then registers them in `Bank`. |
+| `CustomerService` | Orchestrator | Validates and creates `RegularCustomer` / `PremiumCustomer` objects, then registers them in `Bank`. Calls `InputValidator` to enforce all four field rules — name format, age range (18–120), contact number format, and address format — before any object is created. |
 
 ### Presentation / I/O Layer
 
 | Class | Type | Responsibility |
 |---|---|---|
-| `BankController` | Controller | Main menu loop (8 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, exit. |
+| `BankController` | Controller | Main menu loop (9 options); translates raw user choices into service calls; catches and displays domain exceptions. Handles: create, view, transact, history, close account, apply fees/interest, view customer accounts, run tests, exit. Long handlers (`handleProcessTransaction`, `handleCreateAccount`) are broken into private helper methods (`printAccountSummary`, `readTransactionType`, `readTransactionAmount`, `confirmTransaction`, `lookUpExistingCustomer`, `registerNewCustomer`, `openAccount`, `printAccountCreatedConfirmation`) to keep every method under 25 lines. Calls `InputValidator.validateAccountNumber()` and `validateCustomerId()` before passing IDs to the service layer. |
 | `InputReader` | I/O helper | Wraps `Scanner`; provides validated reads for strings, menu choices, amounts, and positive integers with automatic re-prompt on invalid input. |
 | `DataInitializer` | Bootstrap utility | Populates the system with 5 sample customers and 6 sample accounts on startup (Michael Chen holds two accounts to demonstrate multi-account customers). |
 | `Main` | Entry point | Wires all dependencies together (manual DI) and launches `BankController.start()`. |
@@ -71,11 +71,13 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 | Class / Interface | Responsibility |
 |---|---|
 | `Transactable` (interface) | Contract (`processTransaction(double, String)`) that `Account` fulfils. |
-| `InputValidator` | Static validation helpers (name, amount, menu choice, ID). |
+| `InputValidator` | Static validation helpers. Provides eight validators: `validateName` (letters/spaces/hyphens/apostrophes only), `validateAge` (18–120), `validateContact` (7–15 digit phone format), `validateAddress` (letters, digits, spaces, commas, hyphens), `validateAccountNumber` (`ACC` + digits), `validateCustomerId` (`CUST` + digits), `validateAmount` (must be > 0), and `validateMenuChoice` (within displayed range). All throw `IllegalArgumentException` on failure. |
 | `InvalidAmountException` | Thrown for negative or zero monetary values. |
 | `InsufficientFundsException` | Thrown when a withdrawal would breach the minimum balance or overdraft limit. |
 | `AccountNotFoundException` | Thrown when a lookup by account / customer ID fails. |
+| `IllegalArgumentException` | Thrown when input fails format or range validation (blank field, wrong pattern, out-of-range menu choice). |
 | `IllegalStateException` | Thrown when an operation is attempted on a closed account. |
+| `OverdraftLimitExceededException` | Thrown by `CheckingAccount.validateWithdrawal()` when a withdrawal would push the balance below `-overdraftLimit`. Extends `InsufficientFundsException` — existing catch blocks for the parent type still handle it automatically. |
 
 ---
 
@@ -213,10 +215,11 @@ BankController.handleViewTransactionHistory()
   └─[2] AccountService.getTransactionHistory(accountNumber)
           ├─ AccountManager.findAccountOrThrow()       ← verify account exists
           └─ TransactionManager.viewTransactionsByAccount(accountNumber)
-                ├─ Iterates Transaction[] in reverse (newest first)
-                ├─ Filters by accountNumber
-                ├─ Calls Transaction.displayTransactionDetails() for each match
-                └─ Prints summary: total deposits, total withdrawals, net change
+                ├─ If no transactions found → prints "No transactions found" and returns
+                ├─ Collects matching transactions into a List<Transaction>
+                ├─ Sorts by Transaction.createdAt descending (newest first)
+                ├─ Calls Transaction.displayTransactionDetails() for each entry
+                └─ Prints summary: total deposits, total withdrawals, net change (±)
 ```
 
 ---
@@ -439,16 +442,16 @@ The system does not use a dedicated DSA library, but it applies several classic 
 
 #### Fixed-Size Array (Bounded Buffer)
 
-**Where:** `AccountManager.accounts` (capacity 50), `TransactionManager.transactions` (capacity 200).
+**Where:** `AccountManager.accounts` (capacity `MAX_ACCOUNTS` = 50), `TransactionManager.transactions` (capacity `MAX_TRANSACTIONS` = 200).
 
 ```
-Account[]     accounts     = new Account[50];      // AccountManager
-Transaction[] transactions = new Transaction[200]; // TransactionManager
+Account[]     accounts     = new Account[MAX_ACCOUNTS];          // AccountManager
+Transaction[] transactions = new Transaction[MAX_TRANSACTIONS];  // TransactionManager
 ```
 
 **DSA concept:** A **static/bounded array** paired with a manual integer index (`accountCount`, `transactionCount`) that tracks the next free slot. This is the same technique used to implement a **bounded buffer** or a **circular buffer** (without the wrap-around here). The index is incremented on every `addAccount()` / `addTransaction()` call; a capacity check before insertion prevents array overflow.
 
-**Trade-off vs ArrayList:** O(1) indexed access and zero resizing overhead, but the capacity is fixed at compile time. If more than 50 accounts are needed, the constant must be changed and recompiled.
+**Trade-off vs ArrayList:** O(1) indexed access and zero resizing overhead, but the capacity is fixed at compile time. If more than 50 accounts are needed, update `MAX_ACCOUNTS` and recompile.
 
 ---
 
@@ -527,40 +530,44 @@ throw new AccountNotFoundException("Account not found: " + accountNumber);
 
 ---
 
-#### Reverse Traversal (Newest-First Display)
+#### Timestamp Sort (Newest-First Display)
 
-**Where:** `TransactionManager.viewTransactionsByAccount()`.
+**Where:** `TransactionManager.printTransactionTable()`.
 
 ```
-for (int i = transactionCount - 1; i >= 0; i--) {
-    if (transactions[i].getAccountNumber().equals(accountNumber)) {
-        transactions[i].displayTransactionDetails();
+List<Transaction> matching = new ArrayList<>();
+for (int i = 0; i < transactionCount; i++) {
+    if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
+        matching.add(transactions[i]);
     }
 }
+matching.sort(Comparator.comparing(Transaction::getCreatedAt).reversed());
 ```
 
-**DSA concept:** **Reverse iteration** over an array — traverses from the last used index down to 0. Because transactions are appended in chronological order, iterating in reverse yields the most recent record first. This gives the user a **newest-first / LIFO** view without any sorting or auxiliary data structure. Time complexity remains O(n); no extra memory is used.
+**DSA concept:** **Sort by comparator** — a two-step filter-then-sort pattern. First, a linear pass (O(n)) collects all transactions belonging to the account. Second, `List.sort()` applies a `Comparator` derived from `Transaction.createdAt` (a `LocalDateTime` field) in reversed order, giving O(n log n) total. The sort is stable, meaning transactions with the same millisecond timestamp preserve their insertion order.
 
-**Conceptual link:** This is equivalent to reading a **stack** from top to bottom — even though a stack is not used, the reverse iteration replicates its pop-order traversal.
+**Why sort instead of reverse-iterate?** The previous implementation relied on insertion order to achieve newest-first display — it worked as long as transactions were always appended chronologically. Explicit sorting by `createdAt` is correct regardless of insertion order, making the output reliable even if transactions were ever loaded from an external source or merged from another ledger.
+
+**Trade-off:** O(n log n) vs O(n) — negligible at `MAX_TRANSACTIONS` = 200, but the correctness gain is worth it.
 
 ---
 
 #### Filter + Accumulate (Map-Reduce style)
 
-**Where:** `TransactionManager.calculateTotalDeposits()` and `calculateTotalWithdrawals()`.
+**Where:** `TransactionManager.calculateTotalDeposits()` and `calculateTotalWithdrawals()` — both delegate to the private `sumByTransactionType(accountNumber, type)` helper.
 
 ```
-// Pseudocode of what both methods do:
+// Pseudocode of sumByTransactionType:
 total = 0
 for each transaction in transactions[0..transactionCount]:
-    if transaction.accountNumber == target AND transaction.type == "DEPOSIT":
+    if transaction.accountNumber == target AND transaction.type == targetType:
         total += transaction.amount
 return total
 ```
 
-**DSA concept:** A **filter-then-accumulate** pass — a specific form of the general **reduce / fold** operation. The filter predicate is `accountNumber matches AND type matches`; the accumulator is a running sum. In functional programming this is `stream.filter(...).mapToDouble(...).sum()`. The explicit loop here does the same thing imperatively. Time complexity is O(n) per call; the two calls (deposits + withdrawals) make two full passes.
+**DSA concept:** A **filter-then-accumulate** pass — a specific form of the general **reduce / fold** operation. The filter predicate is `accountNumber matches AND type matches`; the accumulator is a running sum. In functional programming this is `stream.filter(...).mapToDouble(...).sum()`. The explicit loop here does the same thing imperatively. Time complexity is O(n) per call; the two calls (deposits + withdrawals) make two full passes. Extracting `sumByTransactionType` removes the duplicate loop that previously existed in both methods (DRY principle).
 
-**Optimisation note:** Both totals could be computed in a single pass with two accumulators. The current two-pass approach is clearer to read and adequate given the 200-transaction ceiling.
+**Optimisation note:** Both totals could be computed in a single pass with two accumulators. The current two-pass approach is clearer to read and adequate given the `MAX_TRANSACTIONS` = 200 ceiling.
 
 ---
 
@@ -618,7 +625,167 @@ The system contains two registries that serve similar purposes but use different
 | Append-only records | Write-ahead log / event log | `TransactionManager.transactions` |
 | Static auto-increment | Sequence generator | `Account`, `Customer`, `Transaction` constructors |
 | Sequential scan | Linear search O(n) | `AccountManager.findAccountOrThrow()` |
-| Bottom-up iteration | Reverse traversal / stack-order | `TransactionManager.viewTransactionsByAccount()` |
-| Filter + sum | Reduce / fold | `TransactionManager.calculateTotalDeposits/Withdrawals()` |
+| Sort by comparator | Timestamp sort / O(n log n) | `TransactionManager.printTransactionTable()` |
+| Filter + sum | Reduce / fold | `TransactionManager.sumByTransactionType()` |
 | Pre-condition chain | Guard clauses / fail-fast | `Account.deposit()`, `Account.withdraw()` |
 | Abstract method override | Dynamic dispatch / Strategy | `validateWithdrawal()`, `getAccountType()` |
+
+---
+
+## 8. Code Quality Standards
+
+This project follows the **Google Java Style Guide** throughout.
+
+### 8.1 Constant Naming (UPPER_SNAKE_CASE)
+
+All `static final` constants use UPPER_SNAKE_CASE as required by the style guide:
+
+| Constant | Class | Value |
+|---|---|---|
+| `MAX_ACCOUNTS` | `AccountManager` | 50 |
+| `MAX_TRANSACTIONS` | `TransactionManager` | 200 |
+| `INTEREST_RATE` | `SavingsAccount` | 0.035 |
+| `MINIMUM_BALANCE` | `SavingsAccount` | 500.0 |
+| `OVERDRAFT_LIMIT` | `CheckingAccount` | 1000.0 |
+| `MONTHLY_FEE` | `CheckingAccount` | 10.0 |
+
+### 8.2 Javadoc Coverage
+
+Every public method across all classes carries a Javadoc comment describing its purpose, parameters (`@param`), and return value (`@return`) or exceptions thrown (`@throws`) where applicable. This applies to abstract methods, interface implementations, getters, and static utility methods.
+
+### 8.3 Method Length (≤ 25 lines)
+
+No public or private method exceeds 25 lines of executable code. Long handlers in `BankController` were decomposed into focused private helpers. `TransactionManager.viewTransactionsByAccount()` was split into four private methods. This keeps each method readable and testable in isolation.
+
+### 8.4 Input Validation
+
+All user-supplied strings are validated by `InputValidator` before they reach the service layer. Each rule is enforced with a regular expression and throws `IllegalArgumentException` on failure, which `BankController` catches and displays without crashing the menu loop.
+
+| Field | Validator method | Rule |
+|---|---|---|
+| Customer / account name | `validateName` | Letters, spaces, hyphens, apostrophes only |
+| Age | `validateAge` | 18–120 inclusive |
+| Contact number | `validateContact` | 7–15 characters: digits, spaces, `+`, `-`, `()` |
+| Address | `validateAddress` | Letters, digits, spaces, commas, periods, hyphens |
+| Account number | `validateAccountNumber` | Must match `ACC` + one or more digits |
+| Customer ID | `validateCustomerId` | Must match `CUST` + one or more digits |
+| Transaction amount | `validateAmount` | Must be greater than zero |
+| Menu choice | `validateMenuChoice` | Must be within the displayed range |
+
+---
+
+## 9. Testing Strategy
+
+### 9.1 Test Structure
+
+Tests live under `src/test/java/com/bank_management_system/`, mirroring the main source tree. Maven picks them up automatically via the Surefire plugin (3.1.2) configured in `pom.xml`.
+
+```
+src/test/java/com/bank_management_system/
+├── TestResultLogger.java      JUnit 5 TestWatcher — prints PASSED/FAILED per test
+├── AccountTest.java           Unit tests for deposit() and withdraw()
+├── TransactionManagerTest.java Unit tests for transaction recording and totals
+└── AccountServiceTest.java    Unit tests for AccountService using Mockito mocks
+```
+
+Dependencies declared in `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.10.0</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-junit-jupiter</artifactId>
+    <version>5.5.0</version>
+    <scope>test</scope>
+</dependency>
+```
+
+Run all tests with:
+
+```bash
+mvn test
+```
+
+---
+
+### 9.2 Why Two Different Testing Approaches
+
+The suite uses plain JUnit for some classes and Mockito for others. The choice depends on whether a class has external dependencies:
+
+| Class under test | Approach | Reason |
+|---|---|---|
+| `Account` (via `SavingsAccount` / `CheckingAccount`) | JUnit only — real objects | `Account` has no dependencies injected through its constructor; it is entirely self-contained. Creating a real instance and calling `deposit()` / `withdraw()` directly is the simplest and most accurate test. |
+| `TransactionManager` | JUnit only — real objects | Also self-contained — it holds its own array. A real instance starts empty and behaves predictably. |
+| `AccountService` | JUnit + Mockito mocks | `AccountService` depends on `Bank`, `AccountManager`, and `TransactionManager` passed through its constructor. Testing it with real instances would mean all three must work correctly for the test to pass — a failure in `AccountManager` would break an `AccountService` test, making it hard to pinpoint the cause. Mocks isolate `AccountService` completely. |
+
+---
+
+### 9.3 JUnit 5 Patterns Used
+
+| Pattern | Where | Purpose |
+|---|---|---|
+| `@BeforeEach` | All three test classes | Resets fresh objects before every test so no state leaks between tests |
+| `@Test` | Every test method | Marks the method as a test case for JUnit to discover and run |
+| `assertEquals(expected, actual, delta)` | `AccountTest`, `TransactionManagerTest` | Verifies balance values and totals with a floating-point tolerance |
+| `assertThrows(ExceptionType, lambda)` | `AccountTest`, `AccountServiceTest` | Verifies that an exception of the correct type is thrown — without this, a swallowed exception would silently pass |
+| `assertNotNull(value)` | `AccountTest` | Verifies that `deposit()` / `withdraw()` return a Transaction object, not null |
+| `assertTrue` / `assertFalse` | `AccountServiceTest` | Verifies boolean state (e.g. `isFeesWaived()`) |
+| `@ExtendWith(TestResultLogger.class)` | All three test classes | Attaches the custom `TestWatcher` that prints the formatted PASSED/FAILED console line after each test |
+
+---
+
+### 9.4 Mockito Patterns Used
+
+All Mockito usage is in `AccountServiceTest`. `@ExtendWith(MockitoExtension.class)` activates mock processing for that class.
+
+| Pattern | Annotation / method | What it does |
+|---|---|---|
+| Create a mock | `@Mock` | Replaces a real `Bank`, `AccountManager`, or `TransactionManager` with a fake that does nothing by default and records every call made to it |
+| Inject mocks | `@InjectMocks` | Mockito constructs `AccountService` and automatically passes the three `@Mock` fields into its constructor — no manual wiring needed |
+| Stub a return value | `when(mock.method(arg)).thenReturn(value)` | Tells the mock what to return when a specific method is called, so the test controls the code path taken by `AccountService` |
+| Stub an exception | `when(mock.method(arg)).thenThrow(exception)` | Forces the error path — used to test how `AccountService` handles `AccountNotFoundException` without needing a broken data store |
+| Verify a call happened | `verify(mock, times(n)).method(arg)` | Asserts that `AccountService` called the dependency the expected number of times — proves coordination logic, not just output |
+| Verify a call never happened | `verify(mock, never()).method(any())` | Asserts a guard clause stopped execution before a dependency was touched — used to confirm the ledger is never written when a transaction is invalid |
+
+---
+
+### 9.5 Test Coverage Summary
+
+> **17 tests total** — run with `mvn test`.
+
+**`AccountTest` — 8 tests**
+
+| Test method | What it verifies |
+|---|---|
+| `depositUpdatesBalance` | Balance increases by the deposited amount |
+| `depositZeroThrowsInvalidAmountException` | Zero deposit is rejected |
+| `depositToClosedAccountThrowsIllegalStateException` | Deposit into a closed account is blocked |
+| `withdrawUpdatesBalance` | Balance decreases by the withdrawn amount |
+| `withdrawBelowMinimumThrowsException` | Withdrawal that would breach the $500 minimum is rejected |
+| `withdrawFromClosedAccountThrowsIllegalStateException` | Withdrawal from a closed account is blocked |
+| `overdraftWithinLimitAllowed` | Checking account balance may go negative within the $1,000 overdraft limit |
+| `overdraftExceedThrowsOverdraftLimitExceededException` | Withdrawal that exceeds the overdraft limit throws `OverdraftLimitExceededException` |
+
+**`TransactionManagerTest` — 4 tests**
+
+| Test method | What it verifies |
+|---|---|
+| `addTransactionRecordsDeposit` | A logged deposit appears in `calculateTotalDeposits()` |
+| `calculateTotalDepositsAggregatesMultiple` | Multiple deposits are summed correctly |
+| `depositsMinusWithdrawalsEqualsNetBalanceChange` | Ledger totals match the actual balance change on the account (SSOT consistency) |
+| `calculateTotalDepositsReturnsZeroForUnknownAccount` | Querying a non-existent account returns 0, not an error |
+
+**`AccountServiceTest` — 5 tests (Mockito)**
+
+| Test method | What it verifies |
+|---|---|
+| `depositLogsTransactionInLedger` | `addTransaction()` is called exactly once on the mocked ledger after a deposit |
+| `unknownAccountThrowsAccountNotFoundException` | `AccountNotFoundException` from the mock propagates out of `AccountService` |
+| `createSavingsAccountBelowMinimumThrowsException` | Balance below $500 throws `InvalidAmountException`; `addAccount()` is never called |
+| `createCheckingAccountWaivesFeeForPremiumCustomer` | Account created for a `PremiumCustomer` has `isFeesWaived() == true` |
+| `closeAccountWithNonZeroBalanceThrowsIllegalStateException` | Closing an account with a remaining balance is blocked |

@@ -24,43 +24,52 @@ public abstract class Customer {
         this.accounts = new ArrayList<>();
     }
 
-    public boolean isEligibleForFeeWaiver(){
+    /** Returns true if this customer qualifies for a monthly fee waiver. Default is false. */
+    public boolean isEligibleForFeeWaiver() {
         return false;
     }
 
-    //  getter methods
-    public String getCustomerId(){ return customerId; }
+    /** Returns the unique customer ID (e.g. CUST001). */
+    public String getCustomerId() { return customerId; }
 
-    public String getName(){ return name; }
-    public void setName(String fullname){
-        name = fullname;
-    }
+    /** Returns the customer's full name. */
+    public String getName() { return name; }
 
-    public int getAge(){ return age; }
-    public void setAge(int userAge){
-        age = userAge;
-    }
+    /** Updates the customer's full name. */
+    public void setName(String fullname) { name = fullname; }
 
-    public String getContact(){ return contact; }
-    public void setContact(String phone){
-        contact = phone;
-    }
+    /** Returns the customer's age. */
+    public int getAge() { return age; }
 
-    public String getAddress(){ return address; }
-    public void setAddress(String location){
-        address = location;
-    }
+    /** Updates the customer's age. */
+    public void setAge(int userAge) { age = userAge; }
 
-    public void addAccount(Account account){
+    /** Returns the customer's contact number. */
+    public String getContact() { return contact; }
+
+    /** Updates the customer's contact number. */
+    public void setContact(String phone) { contact = phone; }
+
+    /** Returns the customer's address. */
+    public String getAddress() { return address; }
+
+    /** Updates the customer's address. */
+    public void setAddress(String location) { address = location; }
+
+    /** Links an account to this customer's portfolio. */
+    public void addAccount(Account account) {
         accounts.add(account);
     }
 
-    public List<Account> getAccounts(){
+    /** Returns an unmodifiable view of this customer's accounts. */
+    public List<Account> getAccounts() {
         return Collections.unmodifiableList(accounts);
     }
-    
-    // abstract methods
+
+    /** Displays this customer's profile details. */
     public abstract void displayCustomerDetails();
+
+    /** Returns the customer tier label (e.g. "Regular" or "Premium"). */
     public abstract String getCustomerType();
 
 
@@ -70,8 +79,6 @@ public abstract class Customer {
                 customerId, name, getCustomerType(), accounts.size());
     }
 
-    // additional methods coz i want to, and also a customer should be able to see the total value of their assets in the bank
-
     private double calculateTotalAssets() {
         double total = 0;
         for (Account acc : accounts) {
@@ -80,6 +87,10 @@ public abstract class Customer {
         return total;
     }
 
+    /**
+     * Prints a formatted table of all accounts in this customer's portfolio,
+     * along with the total number of accounts and combined balance.
+     */
     public void viewCustomerAccounts() {
         System.out.println("\n  --- ACCOUNT PORTFOLIO: " + name + " (" + customerId + ") ---");
         

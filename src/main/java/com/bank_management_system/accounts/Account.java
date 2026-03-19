@@ -1,13 +1,14 @@
 package com.bank_management_system.accounts;
 
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.shared.InsufficientFundsException;
-import com.bank_management_system.shared.InvalidAmountException;
-import com.bank_management_system.shared.IllegalStateException;
-import com.bank_management_system.shared.Transactable;
+import com.bank_management_system.exceptions.IllegalStateException;
+import com.bank_management_system.exceptions.InsufficientFundsException;
+import com.bank_management_system.exceptions.InvalidAmountException;
 import com.bank_management_system.transactions.Transaction;
+import com.bank_management_system.utils.Transactable;
 
 public abstract class Account implements Transactable {
+
     private final String accountNumber;
     private final Customer customer;
     private double balance;
@@ -15,45 +16,70 @@ public abstract class Account implements Transactable {
 
     private static int accountCounter = 1;
 
-    public Account(Customer customer, double balance){
+    public Account(Customer customer, double balance) {
         this.accountNumber = String.format("ACC%03d", accountCounter++);
         this.customer = customer;
         this.balance = balance;
         this.status = "Active";
     }
 
-    // getter methods
-    public String getAccountNumber(){ return accountNumber; }
-    public Customer getCustomer(){ return customer; }
-    public String getCustomerName(){ return customer.getName();}
-    public String getCustomerId(){ return customer.getCustomerId();}
-    public double getBalance(){ return balance; }
-    public String getStatus(){ return status;}
+    /** Returns the unique account number (e.g. ACC001). */
+    public String getAccountNumber() { return accountNumber; }
 
+    /** Returns the customer who owns this account. */
+    public Customer getCustomer() { return customer; }
 
-    // abstract methods
+    /** Returns the name of the customer who owns this account. */
+    public String getCustomerName() { return customer.getName(); }
+
+    /** Returns the ID of the customer who owns this account. */
+    public String getCustomerId() { return customer.getCustomerId(); }
+
+    /** Returns the current account balance. */
+    public double getBalance() { return balance; }
+
+    /** Returns the current account status (Active or Closed). */
+    public String getStatus() { return status; }
+
+    /** Prints a formatted summary of this account's details. */
     public abstract void displayAccountDetails();
-    public abstract String getAccountType();
-    protected abstract void validateWithdrawal(double amount);
 
-    // financial operations
-    public final Transaction deposit(double amount){
+    /** Returns the account type label (e.g. "Savings" or "Checking"). */
+    public abstract String getAccountType();
+
+    /**
+     * Deposits the given amount into the account.
+     *
+     * @param amount the amount to deposit (must be greater than zero)
+     * @return the resulting Transaction record
+     * @throws IllegalStateException  if the account is closed
+     * @throws InvalidAmountException if the amount is zero or negative
+     */
+    public final Transaction deposit(double amount) {
         if ("Closed".equalsIgnoreCase(this.status)) {
             throw new IllegalStateException("Cannot deposit into a closed account.");
         }
-
-        if ( amount <= 0){
+        if (amount <= 0) {
             throw new InvalidAmountException("Deposit must be greater than zero");
         }
         balance += amount;
         return new Transaction(accountNumber, "DEPOSIT", amount, balance);
     }
 
-    public final Transaction withdraw(double amount){
+    /**
+     * Withdraws the given amount from the account.
+     *
+     * @param amount the amount to withdraw (must be greater than zero)
+     * @return the resulting Transaction record
+     * @throws IllegalStateException      if the account is closed
+     * @throws InvalidAmountException     if the amount is zero or negative
+     * @throws InsufficientFundsException if the withdrawal would violate account rules
+     */
+    public final Transaction withdraw(double amount) {
         if ("Closed".equalsIgnoreCase(this.status)) {
             throw new IllegalStateException("Cannot withdraw from a closed account.");
         }
-        if( amount <= 0){
+        if (amount <= 0) {
             throw new InvalidAmountException("Withdrawal amount must be greater than zero.");
         }
         validateWithdrawal(amount);
@@ -61,23 +87,36 @@ public abstract class Account implements Transactable {
         return new Transaction(accountNumber, "WITHDRAWAL", amount, balance);
     }
 
+    /**
+     * Processes a deposit or withdrawal and returns whether it succeeded.
+     *
+     * @param amount the transaction amount
+     * @param type   "DEPOSIT" or "WITHDRAWAL"
+     * @return true if the transaction succeeded, false otherwise
+     */
     @Override
-    public boolean processTransaction(double amount, String type){
+    public boolean processTransaction(double amount, String type) {
         try {
-            if("deposit".equalsIgnoreCase(type)){
+            if ("deposit".equalsIgnoreCase(type)) {
                 deposit(amount);
-            } else if ("withdrawal".equalsIgnoreCase(type)){
+            } else if ("withdrawal".equalsIgnoreCase(type)) {
                 withdraw(amount);
             } else {
                 System.out.println("Invalid transaction type. Must be 'DEPOSIT' or 'WITHDRAWAL'.");
                 return false;
             }
-
             return true;
-        }catch(InvalidAmountException | InsufficientFundsException e){
+        } catch (InvalidAmountException | InsufficientFundsException e) {
             System.out.println("Transaction failed: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Closes the account by setting its status to Closed.
+     */
+    public void closeAccount() {
+        this.status = "Closed";
     }
 
     @Override
@@ -86,9 +125,6 @@ public abstract class Account implements Transactable {
                 accountNumber, getAccountType(), customer.getName(), balance, status);
     }
 
-    // additional method to disable account
-    public void closeAccount() {
-        this.status = "Closed"; // Usually, you'd also set balance to 0 and transfer it elsewhere
-    }
-    
+    /** Enforces account-specific withdrawal rules before the balance is modified. */
+    protected abstract void validateWithdrawal(double amount);
 }

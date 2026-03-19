@@ -1,79 +1,124 @@
 package com.bank_management_system.transactions;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 public class TransactionManager {
 
-    private static final int max_transactions = 200;
+    private static final int MAX_TRANSACTIONS = 200;
 
-    private final Transaction[] transactions = new Transaction[max_transactions];
+    private final Transaction[] transactions = new Transaction[MAX_TRANSACTIONS];
     private int transactionCount = 0;
 
-    public void addTransaction(Transaction transaction){
-        if( transactionCount < max_transactions){
+    /**
+     * Records a transaction in the ledger.
+     * Prints a warning if the ledger is full and the transaction cannot be stored.
+     *
+     * @param transaction the transaction to record
+     */
+    public void addTransaction(Transaction transaction) {
+        if (transactionCount < MAX_TRANSACTIONS) {
             transactions[transactionCount++] = transaction;
         } else {
-            System.out.println("Warning:Transaction history is full. Transaction not recorded.");
+            System.out.println("Warning: Transaction history is full. Transaction not recorded.");
         }
     }
 
+    /**
+     * Displays the full transaction history for a given account, newest first,
+     * followed by a summary of totals.
+     *
+     * @param accountNumber the account number to look up
+     */
     public void viewTransactionsByAccount(String accountNumber) {
-        // Count matching transactions first
-        int count = 0;
-        for (int i = 0; i < transactionCount; i++) {
-            if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) count++;
-        }
+        int matchCount = countMatchingTransactions(accountNumber);
 
-        if (count == 0) {
+        if (matchCount == 0) {
             System.out.println("  No transactions found for account: " + accountNumber);
             return;
         }
 
-        // Column header
+        printTransactionTable(accountNumber);
+        printTransactionSummary(accountNumber, matchCount);
+    }
+
+    /**
+     * Returns the total amount deposited into the given account.
+     *
+     * @param accountNumber the account number to query
+     * @return total deposits
+     */
+    public double calculateTotalDeposits(String accountNumber) {
+        return sumByTransactionType(accountNumber, "DEPOSIT");
+    }
+
+    /**
+     * Returns the total amount withdrawn from the given account.
+     *
+     * @param accountNumber the account number to query
+     * @return total withdrawals
+     */
+    public double calculateTotalWithdrawals(String accountNumber) {
+        return sumByTransactionType(accountNumber, "WITHDRAWAL");
+    }
+
+    /** Counts how many recorded transactions belong to the given account. */
+    private int countMatchingTransactions(String accountNumber) {
+        int count = 0;
+        for (int i = 0; i < transactionCount; i++) {
+            if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** Prints the header and rows of the transaction table, newest entry first. */
+    private void printTransactionTable(String accountNumber) {
         System.out.println("  TRANSACTION HISTORY");
         System.out.println("  " + "-".repeat(80));
         System.out.printf("  %-7s | %-20s | %-11s | %12s | %s%n",
                 "TXN ID", "DATE/TIME", "TYPE", "AMOUNT", "BALANCE");
         System.out.println("  " + "-".repeat(80));
 
-        // newest first
-        for (int i = transactionCount - 1; i >= 0; i--) { // this backwards loop ensures newest transactions are shown first
+        List<Transaction> matching = new ArrayList<>();
+        for (int i = 0; i < transactionCount; i++) {
             if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
-                transactions[i].displayTransactionDetails();
+                matching.add(transactions[i]);
             }
         }
+        matching.sort(Comparator.comparing(Transaction::getCreatedAt).reversed());
 
-        // Summary
+        for (Transaction t : matching) {
+            t.displayTransactionDetails();
+        }
+    }
+
+    /** Prints the deposit, withdrawal, and net change totals for the given account. */
+    private void printTransactionSummary(String accountNumber, int matchCount) {
         double totalDeposits    = calculateTotalDeposits(accountNumber);
         double totalWithdrawals = calculateTotalWithdrawals(accountNumber);
+
+        double netChange = totalDeposits - totalWithdrawals;
+        String netPrefix = netChange >= 0 ? "+$" : "-$";
+
         System.out.println("  " + "-".repeat(80));
-        System.out.printf("  Total Transactions : %d%n",       count);
-        System.out.printf("  Total Deposits     : $%,.2f%n",   totalDeposits);
-        System.out.printf("  Total Withdrawals  : $%,.2f%n",   totalWithdrawals);
-        System.out.printf("  Net Change         : +$%,.2f%n",  totalDeposits - totalWithdrawals);
+        System.out.printf("  Total Transactions : %d%n",         matchCount);
+        System.out.printf("  Total Deposits     : $%,.2f%n",     totalDeposits);
+        System.out.printf("  Total Withdrawals  : $%,.2f%n",     totalWithdrawals);
+        System.out.printf("  Net Change         : %s%,.2f%n",    netPrefix, Math.abs(netChange));
     }
-    
-    public double calculateTotalDeposits(String accountNumber) {
+
+    /** Sums all transaction amounts of a given type for the specified account. */
+    private double sumByTransactionType(String accountNumber, String type) {
         double total = 0;
         for (int i = 0; i < transactionCount; i++) {
             if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)
-                    && transactions[i].getType().equalsIgnoreCase("DEPOSIT")) {
+                    && transactions[i].getType().equalsIgnoreCase(type)) {
                 total += transactions[i].getAmount();
             }
         }
         return total;
-    }
-
-    public double calculateTotalWithdrawals(String accountNumber) {
-        double total = 0;
-        for (int i = 0; i < transactionCount; i++) {
-            if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)
-                    && transactions[i].getType().equalsIgnoreCase("WITHDRAWAL")) {
-                total += transactions[i].getAmount();
-            }
-        }
-        return total;
-    }
-
-    public int getTransactionCount() {
-        return transactionCount;
     }
 }
