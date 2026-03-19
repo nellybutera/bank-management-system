@@ -76,11 +76,12 @@ src/main/java/com/bank_management_system/
 │   ├── RegularCustomer.java     Standard customer
 │   ├── PremiumCustomer.java     Fee-exempt, $10,000 minimum expectation
 │   └── CustomerService.java     Customer registration
+├── utils/
+│   ├── Transactable.java         
 ├── transactions/
 │   ├── Transaction.java         Immutable event record
 │   └── TransactionManager.java  Ledger — Single Source of Truth (SSOT)
-└── shared/
-    ├── Transactable.java
+└── exceptions/
     ├── InputValidator.java
     ├── AccountNotFoundException.java
     ├── InsufficientFundsException.java
