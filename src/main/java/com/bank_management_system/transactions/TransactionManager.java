@@ -1,5 +1,9 @@
 package com.bank_management_system.transactions;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 public class TransactionManager {
 
     private static final int MAX_TRANSACTIONS = 200;
@@ -78,10 +82,16 @@ public class TransactionManager {
                 "TXN ID", "DATE/TIME", "TYPE", "AMOUNT", "BALANCE");
         System.out.println("  " + "-".repeat(80));
 
-        for (int i = transactionCount - 1; i >= 0; i--) {
+        List<Transaction> matching = new ArrayList<>();
+        for (int i = 0; i < transactionCount; i++) {
             if (transactions[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
-                transactions[i].displayTransactionDetails();
+                matching.add(transactions[i]);
             }
+        }
+        matching.sort(Comparator.comparing(Transaction::getCreatedAt).reversed());
+
+        for (Transaction t : matching) {
+            t.displayTransactionDetails();
         }
     }
 
@@ -90,11 +100,14 @@ public class TransactionManager {
         double totalDeposits    = calculateTotalDeposits(accountNumber);
         double totalWithdrawals = calculateTotalWithdrawals(accountNumber);
 
+        double netChange = totalDeposits - totalWithdrawals;
+        String netPrefix = netChange >= 0 ? "+$" : "-$";
+
         System.out.println("  " + "-".repeat(80));
-        System.out.printf("  Total Transactions : %d%n",      matchCount);
-        System.out.printf("  Total Deposits     : $%,.2f%n",  totalDeposits);
-        System.out.printf("  Total Withdrawals  : $%,.2f%n",  totalWithdrawals);
-        System.out.printf("  Net Change         : +$%,.2f%n", totalDeposits - totalWithdrawals);
+        System.out.printf("  Total Transactions : %d%n",         matchCount);
+        System.out.printf("  Total Deposits     : $%,.2f%n",     totalDeposits);
+        System.out.printf("  Total Withdrawals  : $%,.2f%n",     totalWithdrawals);
+        System.out.printf("  Net Change         : %s%,.2f%n",    netPrefix, Math.abs(netChange));
     }
 
     /** Sums all transaction amounts of a given type for the specified account. */

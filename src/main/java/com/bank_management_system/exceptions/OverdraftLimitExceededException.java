@@ -1,4 +1,4 @@
-package com.bank_management_system.shared;
+package com.bank_management_system.exceptions;
 
 /**
  * Thrown when a withdrawal on a CheckingAccount would push the balance

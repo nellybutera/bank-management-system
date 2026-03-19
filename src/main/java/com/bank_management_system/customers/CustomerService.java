@@ -3,8 +3,8 @@ package com.bank_management_system.customers;
 import java.util.Collection;
 
 import com.bank_management_system.bank.Bank;
-import com.bank_management_system.shared.InputValidator;
-import com.bank_management_system.shared.InvalidAmountException;
+import com.bank_management_system.exceptions.InputValidator;
+import com.bank_management_system.exceptions.InvalidAmountException;
 
 public class CustomerService {
     private final Bank bank;

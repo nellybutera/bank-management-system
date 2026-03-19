@@ -10,6 +10,7 @@ public final class Transaction {
     private String type;
     private double amount;
     private double balanceAfter;
+    private LocalDateTime createdAt;
     private String timestamp;
 
     private static int transactionCounter = 1;
@@ -23,7 +24,8 @@ public final class Transaction {
         this.type = type;
         this.amount = amount;
         this.balanceAfter = balanceAfter;
-        this.timestamp = LocalDateTime.now().format(FORMATTED_DATE_TIME);
+        this.createdAt = LocalDateTime.now();
+        this.timestamp = createdAt.format(FORMATTED_DATE_TIME);
     }
 
     /**
@@ -48,6 +50,13 @@ public final class Transaction {
     public double getAmount() { return amount; }
 
     /**
+     * Returns the timestamp as a LocalDateTime, used for sorting.
+     *
+     * @return the creation timestamp
+     */
+    public LocalDateTime getCreatedAt() { return createdAt; }
+
+    /**
      * Prints a formatted one-line summary of this transaction.
      * Example: TXN001 | 30-10-2025 10:30 AM | DEPOSIT | +$1,500.00 | $6,750.00
      */
@@ -56,9 +65,9 @@ public final class Transaction {
                 ? String.format("+$%,.2f", amount)
                 : String.format("-$%,.2f", amount);
 
-        System.out.printf("%-2S | %-4s | %-10S | %-12s | $%,.2f%n",
+        System.out.printf("  %-7s | %-20s | %-11s | %12s | $%,.2f%n",
                 transactionId,
-                timestamp.toUpperCase(),
+                timestamp,
                 type,
                 amountStr,
                 balanceAfter);

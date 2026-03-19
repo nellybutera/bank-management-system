@@ -6,7 +6,8 @@ import com.bank_management_system.accounts.CheckingAccount;
 import com.bank_management_system.accounts.SavingsAccount;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
-import com.bank_management_system.shared.InputValidator;
+import com.bank_management_system.exceptions.InputValidator;
+
 import java.io.File;
 
 /**

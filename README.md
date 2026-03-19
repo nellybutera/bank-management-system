@@ -84,6 +84,7 @@ src/main/java/com/bank_management_system/
     ├── InputValidator.java
     ├── AccountNotFoundException.java
     ├── InsufficientFundsException.java
+    ├── OverdraftLimitExceededException.java
     ├── InvalidAmountException.java
     ├── IllegalArgumentException.java
     └── IllegalStateException.java
@@ -112,7 +113,7 @@ src/main/java/com/bank_management_system/
 | Dynamic array (ArrayList) | `Customer.accounts` — grows per customer | O(1) amortised append |
 | Hash map | `Bank.customers` keyed by customer ID | O(1) average lookup |
 | Linear search | `AccountManager.findAccountOrThrow()` | O(n) |
-| Reverse traversal | `TransactionManager.viewTransactionsByAccount()` — newest-first display | O(n) |
+| Timestamp sort (newest first) | `TransactionManager.printTransactionTable()` — collects matching transactions into a `List`, sorts by `createdAt` descending via `Comparator.comparing(Transaction::getCreatedAt).reversed()` | O(n log n) |
 | Filter + accumulate | `calculateTotalDeposits()` / `calculateTotalWithdrawals()` | O(n) |
 | Guard clauses (fail-fast) | `Account.deposit()` / `withdraw()` — validate before mutating | O(1) checks |
 | Static sequence generator | Auto-increment IDs in `Account`, `Customer`, `Transaction` | O(1) |
@@ -148,6 +149,46 @@ All user input is validated before reaching the service layer via `InputValidato
 | `InvalidAmountException` | Amount is zero or negative |
 | `IllegalArgumentException` | Invalid input — blank field, bad format, or out-of-range menu choice |
 | `IllegalStateException` | Operation attempted on a closed account |
+
+---
+
+## Unit Tests
+
+17 tests across 3 files. Run with `mvn test` or via menu option 8 inside the application.
+
+### AccountTest — 8 tests (JUnit 5, real objects)
+
+| Test | Result |
+|---|---|
+| `depositUpdatesBalance` | PASSED |
+| `depositZeroThrowsInvalidAmountException` | PASSED |
+| `depositToClosedAccountThrowsIllegalStateException` | PASSED |
+| `withdrawUpdatesBalance` | PASSED |
+| `withdrawBelowMinimumThrowsException` | PASSED |
+| `withdrawFromClosedAccountThrowsIllegalStateException` | PASSED |
+| `overdraftWithinLimitAllowed` | PASSED |
+| `overdraftExceedThrowsOverdraftLimitExceededException` | PASSED |
+
+### TransactionManagerTest — 4 tests (JUnit 5, real objects)
+
+| Test | Result |
+|---|---|
+| `addTransactionRecordsDeposit` | PASSED |
+| `calculateTotalDepositsAggregatesMultiple` | PASSED |
+| `depositsMinusWithdrawalsEqualsNetBalanceChange` | PASSED |
+| `calculateTotalDepositsReturnsZeroForUnknownAccount` | PASSED |
+
+### AccountServiceTest — 5 tests (JUnit 5 + Mockito)
+
+| Test | Result |
+|---|---|
+| `depositLogsTransactionInLedger` | PASSED |
+| `unknownAccountThrowsAccountNotFoundException` | PASSED |
+| `createSavingsAccountBelowMinimumThrowsException` | PASSED |
+| `createCheckingAccountWaivesFeeForPremiumCustomer` | PASSED |
+| `closeAccountWithNonZeroBalanceThrowsIllegalStateException` | PASSED |
+
+`AccountServiceTest` uses `@Mock` for `Bank`, `AccountManager`, and `TransactionManager` so that each test isolates `AccountService` from its dependencies. `AccountTest` and `TransactionManagerTest` use real instances — no mocks needed because those classes have no injected dependencies.
 
 ---
 

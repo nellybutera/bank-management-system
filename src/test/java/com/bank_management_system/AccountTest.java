@@ -3,10 +3,11 @@ package com.bank_management_system;
 import com.bank_management_system.accounts.CheckingAccount;
 import com.bank_management_system.accounts.SavingsAccount;
 import com.bank_management_system.customers.RegularCustomer;
-import com.bank_management_system.shared.IllegalStateException;
-import com.bank_management_system.shared.InsufficientFundsException;
-import com.bank_management_system.shared.InvalidAmountException;
-import com.bank_management_system.shared.OverdraftLimitExceededException;
+import com.bank_management_system.exceptions.IllegalStateException;
+import com.bank_management_system.exceptions.InsufficientFundsException;
+import com.bank_management_system.exceptions.InvalidAmountException;
+import com.bank_management_system.exceptions.OverdraftLimitExceededException;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
