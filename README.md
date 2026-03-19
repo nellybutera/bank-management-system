@@ -40,7 +40,7 @@ On startup the application pre-loads five sample customers and six accounts (Mic
 ### Clone & Run
 
 ```bash
-git clone https://github.com/<your-username>/bank_management_system.git
+git clone (https://github.com/nellybutera/bank-management-system)
 cd bank_management_system
 mvn compile
 mvn exec:java -Dexec.mainClass="com.bank_management_system.Main"
