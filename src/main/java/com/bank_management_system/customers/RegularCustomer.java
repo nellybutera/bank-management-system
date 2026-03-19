@@ -2,16 +2,23 @@ package com.bank_management_system.customers;
 
 public class RegularCustomer extends Customer {
 
-    public RegularCustomer(String name, int age, String contact, String address){
+    public RegularCustomer(String name, int age, String contact, String address) {
         super(name, age, contact, address);
     }
 
-    public boolean hasWaivedFees(){
-        return false;
-    }
+    /**
+     * Returns whether this customer's monthly fees are waived.
+     * Regular customers are never eligible for a fee waiver.
+     *
+     * @return false always
+     */
+    public boolean hasWaivedFees() { return false; }
 
+    /**
+     * Prints a formatted summary of this customer's profile details.
+     */
     @Override
-    public void displayCustomerDetails(){
+    public void displayCustomerDetails() {
         System.out.println(" Customer ID : " + getCustomerId());
         System.out.println(" Name        : " + getName());
         System.out.println(" Type        : " + getCustomerType());
@@ -20,9 +27,11 @@ public class RegularCustomer extends Customer {
         System.out.println(" Address     : " + getAddress());
     }
 
+    /**
+     * Returns the customer tier label.
+     *
+     * @return "Regular"
+     */
     @Override
-    public String getCustomerType(){
-        return "Regular";
-    }
-
+    public String getCustomerType() { return "Regular"; }
 }
