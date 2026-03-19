@@ -16,12 +16,23 @@ public class InputReader {
         this.scanner = new Scanner(System.in);
     }
 
-    /** Reads a raw line from the console, trimmed. */
+    /**
+     * Reads a raw line from the console and trims leading/trailing whitespace.
+     *
+     * @return the trimmed input string
+     */
     public String nextLine() {
         return scanner.nextLine().trim();
     }
 
-    // Reads and validates a menu choice in [min, max]. Loops until valid.
+    /**
+     * Reads and validates a menu choice in the range [min, max].
+     * Loops until the user enters a valid integer within the range.
+     *
+     * @param min the minimum valid option
+     * @param max the maximum valid option
+     * @return the validated menu choice
+     */
     public int readMenuChoice(int min, int max) {
         while (true) {
             try {
@@ -36,7 +47,12 @@ public class InputReader {
         }
     }
 
-    // Reads a positive decimal number. Loops until a parseable value is entered.
+    /**
+     * Reads a positive decimal amount from the console.
+     * Loops until the user enters a valid number greater than zero.
+     *
+     * @return the validated positive amount
+     */
     public double readAmount() {
         while (true) {
             try {
@@ -52,7 +68,13 @@ public class InputReader {
         }
     }
 
-    // Reads a positive integer for a given field label. Loops until valid.
+    /**
+     * Reads a positive integer for the given field label.
+     * Loops until the user enters a valid positive integer.
+     *
+     * @param label a descriptive name for the field, used in error messages (e.g. "age")
+     * @return the validated positive integer
+     */
     public int readPositiveInt(String label) {
         while (true) {
             try {
@@ -68,12 +90,17 @@ public class InputReader {
         }
     }
 
-    // Pauses and waits for the user to press Enter before returning to the menu.
+    /**
+     * Pauses execution and waits for the user to press Enter before returning to the menu.
+     */
     public void pressEnterToContinue() {
         System.out.print("\nPress Enter to continue...");
         scanner.nextLine();
     }
 
+    /**
+     * Closes the underlying Scanner and releases the input stream.
+     */
     public void close() {
         scanner.close();
     }
