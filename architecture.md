@@ -77,6 +77,7 @@ The system follows a **layered Service Layer pattern** with a clear separation o
 | `AccountNotFoundException` | Thrown when a lookup by account / customer ID fails. |
 | `IllegalArgumentException` | Thrown when input fails format or range validation (blank field, wrong pattern, out-of-range menu choice). |
 | `IllegalStateException` | Thrown when an operation is attempted on a closed account. |
+| `OverdraftLimitExceededException` | Thrown by `CheckingAccount.validateWithdrawal()` when a withdrawal would push the balance below `-overdraftLimit`. Extends `InsufficientFundsException` — existing catch blocks for the parent type still handle it automatically. |
 
 ---
 
@@ -665,3 +666,181 @@ All user-supplied strings are validated by `InputValidator` before they reach th
 | Customer ID | `validateCustomerId` | Must match `CUST` + one or more digits |
 | Transaction amount | `validateAmount` | Must be greater than zero |
 | Menu choice | `validateMenuChoice` | Must be within the displayed range |
+
+---
+
+## 9. Testing Strategy
+
+### 9.1 Test Structure
+
+Tests live under `src/test/java/com/bank_management_system/`, mirroring the main source tree. Maven picks them up automatically via the Surefire plugin (3.1.2) configured in `pom.xml`.
+
+```
+src/test/java/com/bank_management_system/
+├── TestResultLogger.java      JUnit 5 TestWatcher — prints PASSED/FAILED per test
+├── AccountTest.java           Unit tests for deposit() and withdraw()
+├── TransactionManagerTest.java Unit tests for transaction recording and totals
+└── AccountServiceTest.java    Unit tests for AccountService using Mockito mocks
+```
+
+Dependencies declared in `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.10.0</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-junit-jupiter</artifactId>
+    <version>5.5.0</version>
+    <scope>test</scope>
+</dependency>
+```
+
+Run all tests with:
+
+```bash
+mvn test
+```
+
+---
+
+### 9.2 Why Two Different Testing Approaches
+
+The suite uses plain JUnit for some classes and Mockito for others. The choice depends on whether a class has external dependencies:
+
+| Class under test | Approach | Reason |
+|---|---|---|
+| `Account` (via `SavingsAccount` / `CheckingAccount`) | JUnit only — real objects | `Account` has no dependencies injected through its constructor; it is entirely self-contained. Creating a real instance and calling `deposit()` / `withdraw()` directly is the simplest and most accurate test. |
+| `TransactionManager` | JUnit only — real objects | Also self-contained — it holds its own array. A real instance starts empty and behaves predictably. |
+| `AccountService` | JUnit + Mockito mocks | `AccountService` depends on `Bank`, `AccountManager`, and `TransactionManager` passed through its constructor. Testing it with real instances would mean all three must work correctly for the test to pass — a failure in `AccountManager` would break an `AccountService` test, making it hard to pinpoint the cause. Mocks isolate `AccountService` completely. |
+
+---
+
+### 9.3 JUnit 5 Patterns Used
+
+| Pattern | Where | Purpose |
+|---|---|---|
+| `@BeforeEach` | All three test classes | Resets fresh objects before every test so no state leaks between tests |
+| `@Test` | Every test method | Marks the method as a test case for JUnit to discover and run |
+| `assertEquals(expected, actual, delta)` | `AccountTest`, `TransactionManagerTest` | Verifies balance values and totals with a floating-point tolerance |
+| `assertThrows(ExceptionType, lambda)` | `AccountTest`, `AccountServiceTest` | Verifies that an exception of the correct type is thrown — without this, a swallowed exception would silently pass |
+| `assertNotNull(value)` | `AccountTest` | Verifies that `deposit()` / `withdraw()` return a Transaction object, not null |
+| `assertTrue` / `assertFalse` | `AccountServiceTest` | Verifies boolean state (e.g. `isFeesWaived()`) |
+| `@ExtendWith(TestResultLogger.class)` | All three test classes | Attaches the custom `TestWatcher` that prints the formatted PASSED/FAILED console line after each test |
+
+---
+
+### 9.4 Mockito Patterns Used
+
+All Mockito usage is in `AccountServiceTest`. `@ExtendWith(MockitoExtension.class)` activates mock processing for that class.
+
+| Pattern | Annotation / method | What it does |
+|---|---|---|
+| Create a mock | `@Mock` | Replaces a real `Bank`, `AccountManager`, or `TransactionManager` with a fake that does nothing by default and records every call made to it |
+| Inject mocks | `@InjectMocks` | Mockito constructs `AccountService` and automatically passes the three `@Mock` fields into its constructor — no manual wiring needed |
+| Stub a return value | `when(mock.method(arg)).thenReturn(value)` | Tells the mock what to return when a specific method is called, so the test controls the code path taken by `AccountService` |
+| Stub an exception | `when(mock.method(arg)).thenThrow(exception)` | Forces the error path — used to test how `AccountService` handles `AccountNotFoundException` without needing a broken data store |
+| Verify a call happened | `verify(mock, times(n)).method(arg)` | Asserts that `AccountService` called the dependency the expected number of times — proves coordination logic, not just output |
+| Verify a call never happened | `verify(mock, never()).method(any())` | Asserts a guard clause stopped execution before a dependency was touched — used to confirm the ledger is never written when a transaction is invalid |
+
+---
+
+### 9.5 Test Coverage Summary
+
+**`AccountTest` — 14 tests**
+
+> Total tests across all files: **72** — run with `mvn test`.
+
+| Test method | What it verifies |
+|---|---|
+| `depositUpdatesBalance` | Balance increases by the deposited amount |
+| `depositReturnsTransactionRecord` | Returns a non-null `Transaction` with correct type, amount, and account number |
+| `depositZeroThrowsInvalidAmountException` | Zero deposit is rejected |
+| `depositNegativeThrowsInvalidAmountException` | Negative deposit is rejected |
+| `depositToClosedAccountThrowsIllegalStateException` | Deposit into a closed account is blocked |
+| `withdrawUpdatesBalance` | Balance decreases by the withdrawn amount |
+| `withdrawReturnsTransactionRecord` | Returns a non-null `Transaction` with correct type, amount, and account number |
+| `withdrawExactMinimumBalanceAllowed` | Withdrawing down to exactly the minimum balance succeeds |
+| `withdrawBelowMinimumThrowsException` | Withdrawal that would breach the $500 minimum is rejected |
+| `withdrawZeroThrowsInvalidAmountException` | Zero withdrawal is rejected |
+| `withdrawFromClosedAccountThrowsIllegalStateException` | Withdrawal from a closed account is blocked |
+| `overdraftWithinLimitAllowed` | Checking account balance may go negative within the $1,000 overdraft limit |
+| `overdraftExceedThrowsOverdraftLimitExceededException` | Withdrawal that would exceed the overdraft limit throws `OverdraftLimitExceededException` specifically |
+| `overdraftLimitExceededIsSubtypeOfInsufficientFunds` | `OverdraftLimitExceededException` is a subtype of `InsufficientFundsException` — inheritance hierarchy is correct |
+
+**`TransactionManagerTest` — 7 tests**
+
+| Test method | What it verifies |
+|---|---|
+| `addTransactionRecordsDeposit` | A logged deposit appears in `calculateTotalDeposits()` |
+| `addTransactionRecordsWithdrawal` | A logged withdrawal appears in `calculateTotalWithdrawals()` |
+| `calculateTotalDepositsAggregatesMultiple` | Multiple deposits are summed correctly |
+| `calculateTotalWithdrawalsAggregatesMultiple` | Multiple withdrawals are summed correctly |
+| `depositsMinusWithdrawalsEqualsNetBalanceChange` | Ledger totals match the actual balance change on the account (SSOT consistency) |
+| `calculateTotalDepositsReturnsZeroForUnknownAccount` | Querying a non-existent account returns 0, not an error |
+| `transactionLinkedToCorrectAccount` | The `Transaction` object carries the account number it was created for |
+
+**`InputValidatorTest` — 35 tests**
+
+| Test method | What it verifies |
+|---|---|
+| `validNamePasses` | A normal full name clears the regex |
+| `nameWithApostrophePasses` | Apostrophes are allowed (e.g. O'Brien) |
+| `nameWithHyphenPasses` | Hyphens are allowed (e.g. Mary-Jane) |
+| `blankNameThrowsException` | Blank/whitespace-only name is rejected |
+| `nameWithDigitsThrowsException` | Digits in a name are rejected |
+| `nameWithSpecialCharsThrowsException` | Symbols in a name are rejected |
+| `validAgePasses` | A normal age within range clears the check |
+| `minimumAgePasses` | Age 18 is on the boundary — must pass |
+| `maximumAgePasses` | Age 120 is on the boundary — must pass |
+| `ageBelowMinimumThrowsException` | Age 17 is below the minimum — rejected |
+| `ageAboveMaximumThrowsException` | Age 121 is above the maximum — rejected |
+| `validPhoneNumberPasses` | Standard format "555-1234" passes |
+| `internationalFormatPasses` | "+1 555-1234" (with leading +) passes |
+| `tooShortContactThrowsException` | Fewer than 7 characters rejected |
+| `lettersInContactThrowsException` | Letters in a phone number rejected |
+| `validAddressPasses` | "123 Main St, Springfield" passes |
+| `blankAddressThrowsException` | Blank address rejected |
+| `addressWithInvalidCharsThrowsException` | Special symbols in address rejected |
+| `validAccountNumberPasses` | "ACC001" passes |
+| `lowercaseAccountNumberPasses` | "acc001" passes — check is case-insensitive |
+| `accountNumberWrongPrefixThrowsException` | "AC001" (wrong prefix) rejected |
+| `accountNumberWithNoDigitsThrowsException` | "ACC" with no digits rejected |
+| `blankAccountNumberThrowsException` | Blank account number rejected |
+| `validCustomerIdPasses` | "CUST001" passes |
+| `lowercaseCustomerIdPasses` | "cust001" passes — check is case-insensitive |
+| `invalidCustomerIdPrefixThrowsException` | "CUS001" (wrong prefix) rejected |
+| `blankCustomerIdThrowsException` | Blank customer ID rejected |
+| `validAmountPasses` | Positive amount passes |
+| `zeroAmountThrowsInvalidAmountException` | Zero amount throws `InvalidAmountException` |
+| `negativeAmountThrowsInvalidAmountException` | Negative amount throws `InvalidAmountException` |
+| `validMenuChoicePasses` | Choice within range passes |
+| `minimumMenuChoicePasses` | Choice equal to min is on the boundary — passes |
+| `maximumMenuChoicePasses` | Choice equal to max is on the boundary — passes |
+| `choiceBelowMinThrowsException` | Choice below min rejected |
+| `choiceAboveMaxThrowsException` | Choice above max rejected |
+
+**`AccountServiceTest` — 16 tests (Mockito)**
+
+| Test method | What it verifies |
+|---|---|
+| `depositLogsTransactionInLedger` | `addTransaction()` is called exactly once on the mocked ledger after a deposit |
+| `withdrawalLogsTransactionInLedger` | `addTransaction()` is called exactly once after a withdrawal |
+| `invalidTransactionTypeThrowsIllegalArgumentException` | Unknown type throws exception; `addTransaction()` is never called |
+| `unknownAccountThrowsAccountNotFoundException` | `AccountNotFoundException` from the mock propagates out of `AccountService` |
+| `createSavingsAccountRegistersWithAccountManager` | `addAccount()` is called on the mocked `AccountManager` after successful creation |
+| `createSavingsAccountBelowMinimumThrowsException` | Balance below $500 throws `InvalidAmountException`; `addAccount()` is never called |
+| `createCheckingAccountWaivesFeeForPremiumCustomer` | Account created for a `PremiumCustomer` has `isFeesWaived() == true` |
+| `createCheckingAccountDoesNotWaiveFeeForRegularCustomer` | Account created for a `RegularCustomer` has `isFeesWaived() == false` |
+| `closeAccountWithNonZeroBalanceThrowsIllegalStateException` | Closing an account with a remaining balance is blocked |
+| `getTransactionHistoryCallsBothManagerAndLedger` | Both `findAccountOrThrow()` and `viewTransactionsByAccount()` are called exactly once |
+| `applyMonthlyFeesChargesNonWaivedCheckingAccount` | Fee is deducted and logged; count returns 1 |
+| `applyMonthlyFeesSkipsWaivedCheckingAccount` | Premium account is skipped; ledger untouched; count returns 0 |
+| `applyMonthlyFeesIgnoresSavingsAccounts` | SavingsAccount is not a CheckingAccount — ignored entirely |
+| `applyInterestCreditsSavingsAccount` | Interest deposit is logged; count returns 1 |
+| `applyInterestSkipsClosedSavingsAccount` | Closed account is skipped; ledger untouched; count returns 0 |
+| `applyInterestIgnoresCheckingAccounts` | CheckingAccount is not a SavingsAccount — ignored entirely |
