@@ -1,4 +1,7 @@
-package com.bank_management_system.exceptions;
+package com.bank_management_system.utils;
+
+import com.bank_management_system.exceptions.IllegalArgumentException;
+import com.bank_management_system.exceptions.InvalidAmountException;
 
 public class InputValidator {
 
