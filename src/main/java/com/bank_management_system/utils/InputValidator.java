@@ -25,18 +25,6 @@ public class InputValidator {
     }
 
     /**
-     * Validates that an amount is greater than zero.
-     *
-     * @param amount the amount to validate
-     * @throws InvalidAmountException if the amount is zero or negative
-     */
-    public static void validateAmount(double amount) {
-        if (amount <= 0) {
-            throw new InvalidAmountException("Amount must be greater than zero. Received: " + amount);
-        }
-    }
-
-    /**
      * Validates that a menu choice falls within the allowed range.
      *
      * @param choice the user's selection
@@ -50,20 +38,6 @@ public class InputValidator {
                     "Invalid choice. Please enter a number between " + min + " and " + max + ".");
         }
     }
-
-    /**
-     * Validates that a generic ID field is non-blank.
-     *
-     * @param id    the ID value to check
-     * @param label a human-readable label used in the error message (e.g. "Account number")
-     * @throws IllegalArgumentException if the ID is null or blank
-     */
-    public static void validateId(String id, String label) {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException(label + " must not be blank.");
-        }
-    }
-
     /**
      * Validates that an age is within the acceptable range of 18 to 120.
      *
