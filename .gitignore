@@ -1,0 +1,19 @@
+# Claude Code local files — not for version control
+CLAUDE.md
+skills.md
+.claude/
+
+# Compiled output
+target/
+*.class
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
