@@ -41,20 +41,13 @@ public abstract class Customer {
     /** Returns the customer's age. */
     public int getAge() { return age; }
 
-    /** Updates the customer's age. */
-    public void setAge(int userAge) { age = userAge; }
-
     /** Returns the customer's contact number. */
     public String getContact() { return contact; }
 
-    /** Updates the customer's contact number. */
-    public void setContact(String phone) { contact = phone; }
 
     /** Returns the customer's address. */
     public String getAddress() { return address; }
 
-    /** Updates the customer's address. */
-    public void setAddress(String location) { address = location; }
 
     /** Links an account to this customer's portfolio. */
     public void addAccount(Account account) {

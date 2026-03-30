@@ -6,7 +6,9 @@ import com.bank_management_system.accounts.CheckingAccount;
 import com.bank_management_system.accounts.SavingsAccount;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
-import com.bank_management_system.shared.InputValidator;
+import com.bank_management_system.utils.InputValidator;
+
+import java.io.File;
 
 /**
  * UI Controller for the Bank Management System.
@@ -34,7 +36,7 @@ public class BankController {
         boolean running = true;
         while (running) {
             printMenu();
-            int choice = inputReader.readMenuChoice(1, 8);
+            int choice = inputReader.readMenuChoice(1, 9);
 
             switch (choice) {
                 case 1 -> handleCreateAccount();
@@ -44,7 +46,8 @@ public class BankController {
                 case 5 -> handleCloseAccount();
                 case 6 -> handleApplyFeesAndInterest();
                 case 7 -> handleViewCustomerAccounts();
-                case 8 -> running = false;
+                case 8 -> handleRunTests();
+                case 9 -> running = false;
             }
         }
 
@@ -54,6 +57,21 @@ public class BankController {
     }
 
     // ── menu handlers ──────────────────────────────────────────────────────────
+
+    private void handleRunTests() {
+        System.out.println("\n--- RUN TEST SUITE ---");
+        System.out.println("Launching JUnit tests via Maven...\n");
+        try {
+            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "mvn", "test");
+            pb.directory(new File(System.getProperty("user.dir")));
+            pb.inheritIO();
+            Process process = pb.start();
+            process.waitFor();
+        } catch (Exception e) {
+            printError("Could not run tests: " + e.getMessage());
+        }
+        inputReader.pressEnterToContinue();
+    }
 
     private void handleViewAccounts() {
         System.out.println("\n--- ALL BANK ACCOUNTS ---");
@@ -355,7 +373,8 @@ public class BankController {
         System.out.println("  5. Close Account");
         System.out.println("  6. Apply Monthly Fees & Interest");
         System.out.println("  7. View Customer Accounts");
-        System.out.println("  8. Exit");
+        System.out.println("  8. Run Tests");
+        System.out.println("  9. Exit");
         System.out.println("----------------------------------------------");
         System.out.print("Enter choice: ");
     }

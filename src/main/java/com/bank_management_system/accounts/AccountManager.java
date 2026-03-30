@@ -1,7 +1,8 @@
 package com.bank_management_system.accounts;
 
-import com.bank_management_system.shared.AccountNotFoundException;
 import java.util.Arrays;
+
+import com.bank_management_system.exceptions.AccountNotFoundException;
 
 public class AccountManager {
 

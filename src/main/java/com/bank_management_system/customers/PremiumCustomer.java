@@ -2,18 +2,11 @@ package com.bank_management_system.customers;
 
 public class PremiumCustomer extends Customer {
 
-    private static final double minimumBalance = 10000;
 
     public PremiumCustomer(String name, int age, String contact, String address) {
         super(name, age, contact, address);
     }
 
-    /**
-     * Returns the minimum balance required for a Premium account.
-     *
-     * @return the minimum balance amount
-     */
-    public double getMinimumBalance() { return minimumBalance; }
 
     /**
      * Premium customers are always eligible for a monthly fee waiver.

@@ -1,9 +1,9 @@
 package com.bank_management_system;
 
-import com.bank_management_system.shared.IllegalArgumentException;
-import com.bank_management_system.shared.InputValidator;
-
 import java.util.Scanner;
+
+import com.bank_management_system.exceptions.IllegalArgumentException;
+import com.bank_management_system.utils.InputValidator;
 
 /**
  * Utility class that encapsulates all console input reading and validation.
