@@ -1,11 +1,11 @@
 package com.bank_management_system.accounts;
 
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.shared.InsufficientFundsException;
-import com.bank_management_system.shared.InvalidAmountException;
-import com.bank_management_system.shared.IllegalStateException;
-import com.bank_management_system.shared.Transactable;
+import com.bank_management_system.exceptions.IllegalStateException;
+import com.bank_management_system.exceptions.InsufficientFundsException;
+import com.bank_management_system.exceptions.InvalidAmountException;
 import com.bank_management_system.transactions.Transaction;
+import com.bank_management_system.utils.Transactable;
 
 public abstract class Account implements Transactable {
 
