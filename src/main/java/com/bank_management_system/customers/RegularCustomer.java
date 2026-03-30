@@ -7,14 +7,6 @@ public class RegularCustomer extends Customer {
     }
 
     /**
-     * Returns whether this customer's monthly fees are waived.
-     * Regular customers are never eligible for a fee waiver.
-     *
-     * @return false always
-     */
-    public boolean hasWaivedFees() { return false; }
-
-    /**
      * Prints a formatted summary of this customer's profile details.
      */
     @Override

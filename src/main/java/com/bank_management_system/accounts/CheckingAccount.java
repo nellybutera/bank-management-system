@@ -1,7 +1,6 @@
 package com.bank_management_system.accounts;
 
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.exceptions.InsufficientFundsException;
 import com.bank_management_system.exceptions.OverdraftLimitExceededException;
 import com.bank_management_system.transactions.Transaction;
 
