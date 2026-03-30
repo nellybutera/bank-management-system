@@ -1,5 +1,11 @@
 package com.bank_management_system.accounts;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 import com.bank_management_system.bank.Bank;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.exceptions.IllegalStateException;
@@ -100,13 +106,19 @@ public class AccountService {
     }
 
     /**
-     * Displays the transaction history for the given account number.
+     * Displays the transaction history for the given account, sorted by the chosen field.
      *
      * @param accountNumber the account number to look up
+     * @param sortBy        "DATE" for newest-first, "AMOUNT" for highest-amount-first
      */
-    public void getTransactionHistory(String accountNumber) {
+    public void getTransactionHistory(String accountNumber, String sortBy) {
         accountManager.findAccountOrThrow(accountNumber);
-        transactionManager.viewTransactionsByAccount(accountNumber);
+
+        Comparator<Transaction> sortOrder = sortBy.equalsIgnoreCase("AMOUNT")
+                ? Comparator.comparingDouble(Transaction::getAmount).reversed()
+                : Comparator.comparing(Transaction::getCreatedAt).reversed();
+
+        transactionManager.viewTransactionsByAccount(accountNumber, sortOrder);
     }
 
     /**
@@ -141,19 +153,17 @@ public class AccountService {
      * @return the number of accounts charged
      */
     public int applyMonthlyFees() {
-        Account[] allAccounts = accountManager.getAccounts();
-        int chargedCount = 0;
+        Predicate<Account> activeChecking = account ->
+                account instanceof CheckingAccount && account.getStatus().equalsIgnoreCase("Active");
 
-        for (Account account : allAccounts) {
-            if (account instanceof CheckingAccount ca && account.getStatus().equalsIgnoreCase("Active")) {
-                Transaction transaction = ca.applyMonthlyFee();
-                if (transaction != null) {
-                    transactionManager.addTransaction(transaction);
-                    chargedCount++;
-                }
-            }
-        }
-        return chargedCount;
+        List<Transaction> fees = accountManager.findAccountsMatching(activeChecking).stream()
+                .map(CheckingAccount.class::cast)
+                .map(CheckingAccount::applyMonthlyFee)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        fees.forEach(transactionManager::addTransaction);
+        return fees.size();
     }
 
     /**
@@ -163,17 +173,16 @@ public class AccountService {
      * @return the number of accounts credited
      */
     public int applyInterest() {
-        Account[] allAccounts = accountManager.getAccounts();
-        int creditedCount = 0;
+        Predicate<Account> activeSavings = account ->
+                account instanceof SavingsAccount && account.getStatus().equalsIgnoreCase("Active");
 
-        for (Account account : allAccounts) {
-            if (account instanceof SavingsAccount sa && account.getStatus().equalsIgnoreCase("Active")) {
-                double interest = sa.calculateInterest();
-                Transaction transaction = account.deposit(interest);
-                transactionManager.addTransaction(transaction);
-                creditedCount++;
-            }
-        }
-        return creditedCount;
+        List<Account> savingsAccounts = accountManager.findAccountsMatching(activeSavings);
+
+        savingsAccounts.forEach(account -> {
+            SavingsAccount sa = (SavingsAccount) account;
+            transactionManager.addTransaction(account.deposit(sa.calculateInterest()));
+        });
+
+        return savingsAccounts.size();
     }
 }
