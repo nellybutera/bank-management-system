@@ -2,6 +2,7 @@ package com.bank_management_system.utils;
 
 import com.bank_management_system.accounts.Account;
 
+import java.util.Collection;
 import java.util.List;
 
 public class ConcurrencyUtils {
@@ -47,6 +48,29 @@ public class ConcurrencyUtils {
         System.out.printf("Expected Balance : $%,.2f%n", expectedBalance);
         System.out.printf("Correct          : %s%n",
                 account.getBalance() == expectedBalance ? "YES \u2713" : "NO \u2717 (race condition detected)");
+    }
+
+    /**
+     * Applies a $50.00 batch deposit to every active account using a parallel stream.
+     * Each element is processed by a thread from the common fork-join pool, demonstrating
+     * parallel stream processing across multiple accounts simultaneously.
+     *
+     * @param accounts all accounts in the system
+     */
+    public static void runParallelBatchSimulation(Collection<Account> accounts) {
+        System.out.println("\nRunning parallel stream batch simulation...\n");
+
+        accounts.parallelStream()
+                .filter(account -> account.getStatus().equalsIgnoreCase("Active"))
+                .forEach(account -> {
+                    System.out.printf("[%s] Applying $50.00 batch deposit to %s (%s)%n",
+                            Thread.currentThread().getName(),
+                            account.getAccountNumber(),
+                            account.getCustomerName());
+                    account.deposit(50.00);
+                });
+
+        System.out.println("\n\u2713 Parallel batch simulation completed.");
     }
 
     private static Thread makeThread(String name, String type, double amount, Account account) {
