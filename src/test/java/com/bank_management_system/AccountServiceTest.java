@@ -91,4 +91,35 @@ class AccountServiceTest {
         assertThrows(IllegalStateException.class,
                 () -> accountService.closeAccount(savingsAccount.getAccountNumber()));
     }
+
+    @Test
+    void transferUpdatesBothAccountBalances() {
+        SavingsAccount destination = new SavingsAccount(premiumCustomer, 500.00);
+
+        when(accountManager.findAccountOrThrow(savingsAccount.getAccountNumber())).thenReturn(savingsAccount);
+        when(accountManager.findAccountOrThrow(destination.getAccountNumber())).thenReturn(destination);
+
+        accountService.transfer(savingsAccount.getAccountNumber(), destination.getAccountNumber(), 300.00);
+
+        assertEquals(700.00, savingsAccount.getBalance(), 0.001);
+        assertEquals(800.00, destination.getBalance(), 0.001);
+    }
+
+    @Test
+    void transferLogsTwoTransactions() {
+        SavingsAccount destination = new SavingsAccount(premiumCustomer, 500.00);
+
+        when(accountManager.findAccountOrThrow(savingsAccount.getAccountNumber())).thenReturn(savingsAccount);
+        when(accountManager.findAccountOrThrow(destination.getAccountNumber())).thenReturn(destination);
+
+        accountService.transfer(savingsAccount.getAccountNumber(), destination.getAccountNumber(), 300.00);
+
+        verify(transactionManager, times(2)).addTransaction(any(Transaction.class));
+    }
+
+    @Test
+    void transferToSameAccountThrowsIllegalArgumentException() {
+        assertThrows(com.bank_management_system.exceptions.IllegalArgumentException.class,
+                () -> accountService.transfer("ACC001", "ACC001", 100.00));
+    }
 }

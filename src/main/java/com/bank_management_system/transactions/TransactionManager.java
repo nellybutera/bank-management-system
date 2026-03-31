@@ -61,16 +61,22 @@ public class TransactionManager {
 
     private void printTransactionSummary(List<Transaction> accountTransactions) {
         Map<String, List<Transaction>> byType = FunctionalUtils.groupByType(accountTransactions);
-        double totalDeposits    = FunctionalUtils.sumAmounts(byType.getOrDefault("DEPOSIT",    List.of()));
-        double totalWithdrawals = FunctionalUtils.sumAmounts(byType.getOrDefault("WITHDRAWAL", List.of()));
+        double totalDeposits      = FunctionalUtils.sumAmounts(byType.getOrDefault("DEPOSIT",      List.of()));
+        double totalWithdrawals   = FunctionalUtils.sumAmounts(byType.getOrDefault("WITHDRAWAL",   List.of()));
+        double totalTransferIn    = FunctionalUtils.sumAmounts(byType.getOrDefault("TRANSFER_IN",  List.of()));
+        double totalTransferOut   = FunctionalUtils.sumAmounts(byType.getOrDefault("TRANSFER_OUT", List.of()));
 
-        double netChange = totalDeposits - totalWithdrawals;
-        String netPrefix = netChange >= 0 ? "+$" : "-$";
+        double totalCredits = totalDeposits + totalTransferIn;
+        double totalDebits  = totalWithdrawals + totalTransferOut;
+        double netChange    = totalCredits - totalDebits;
+        String netPrefix    = netChange >= 0 ? "+$" : "-$";
 
         System.out.println("  " + "-".repeat(80));
         System.out.printf("  Total Transactions : %d%n",      accountTransactions.size());
         System.out.printf("  Total Deposits     : $%,.2f%n",  totalDeposits);
         System.out.printf("  Total Withdrawals  : $%,.2f%n",  totalWithdrawals);
+        if (totalTransferIn  > 0) System.out.printf("  Transfers In       : $%,.2f%n", totalTransferIn);
+        if (totalTransferOut > 0) System.out.printf("  Transfers Out      : $%,.2f%n", totalTransferOut);
         System.out.printf("  Net Change         : %s%,.2f%n", netPrefix, Math.abs(netChange));
 
         FunctionalUtils.largestTransaction(accountTransactions).ifPresent(t ->

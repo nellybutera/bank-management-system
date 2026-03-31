@@ -136,7 +136,14 @@ public class BankController {
             printAccountSummary(account);
 
             String txnType = readTransactionType();
-            double amount  = readTransactionAmount();
+
+            if ("TRANSFER".equals(txnType)) {
+                handleTransfer(accNum, account.getBalance());
+                inputReader.pressEnterToContinue();
+                return;
+            }
+
+            double amount = readTransactionAmount();
 
             if (!confirmTransaction(accNum, txnType, amount, account.getBalance())) {
                 return;
@@ -149,6 +156,40 @@ public class BankController {
             printError(e.getMessage());
         }
         inputReader.pressEnterToContinue();
+    }
+
+    private void handleTransfer(String fromAccNum, double fromBalance) {
+        System.out.print("Enter destination Account Number: ");
+        String toAccNum = inputReader.nextLine();
+
+        try {
+            InputValidator.validateAccountNumber(toAccNum);
+            Account destination = accountService.getAccountDetails(toAccNum);
+
+            System.out.printf("Destination: %s (%s) | Balance: $%,.2f%n",
+                    destination.getCustomerName(), destination.getAccountType(), destination.getBalance());
+
+            System.out.print("Enter transfer amount: $");
+            double amount = inputReader.readAmount();
+
+            System.out.println("\nTRANSFER CONFIRMATION");
+            System.out.println("-".repeat(50));
+            System.out.printf("From  : %s | $%,.2f → $%,.2f%n", fromAccNum, fromBalance, fromBalance - amount);
+            System.out.printf("To    : %s | $%,.2f → $%,.2f%n", toAccNum,   destination.getBalance(), destination.getBalance() + amount);
+            System.out.printf("Amount: $%,.2f%n", amount);
+            System.out.print("\nConfirm transfer? (Y/N): ");
+
+            if (!inputReader.nextLine().equalsIgnoreCase("Y")) {
+                System.out.println("Transfer cancelled.");
+                return;
+            }
+
+            accountService.transfer(fromAccNum, toAccNum, amount);
+            System.out.println("\nTransfer completed successfully!");
+
+        } catch (Exception e) {
+            printError(e.getMessage());
+        }
     }
 
     private void handleViewTransactionHistory() {
@@ -302,9 +343,14 @@ public class BankController {
         System.out.println("\nTransaction type:");
         System.out.println("  1. Deposit");
         System.out.println("  2. Withdrawal");
-        System.out.print("Select type (1-2): ");
-        int type = inputReader.readMenuChoice(1, 2);
-        return (type == 1) ? "DEPOSIT" : "WITHDRAWAL";
+        System.out.println("  3. Transfer to another account");
+        System.out.print("Select type (1-3): ");
+        int type = inputReader.readMenuChoice(1, 3);
+        return switch (type) {
+            case 1  -> "DEPOSIT";
+            case 2  -> "WITHDRAWAL";
+            default -> "TRANSFER";
+        };
     }
 
     private double readTransactionAmount() {
