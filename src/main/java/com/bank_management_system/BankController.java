@@ -42,20 +42,21 @@ public class BankController {
         boolean running = true;
         while (running) {
             printMenu();
-            int choice = inputReader.readMenuChoice(1, 11);
+            int choice = inputReader.readMenuChoice(1, 12);
 
             switch (choice) {
                 case 1  -> handleCreateAccount();
                 case 2  -> handleViewAccounts();
                 case 3  -> handleProcessTransaction();
-                case 4  -> handleViewTransactionHistory();
-                case 5  -> handleCloseAccount();
-                case 6  -> handleApplyFeesAndInterest();
-                case 7  -> handleViewCustomerAccounts();
-                case 8  -> handleRunTests();
-                case 9  -> handleSaveData();
-                case 10 -> handleConcurrentSimulation();
-                case 11 -> running = false;
+                case 4  -> handleGenerateStatement();
+                case 5  -> handleViewTransactionHistory();
+                case 6  -> handleCloseAccount();
+                case 7  -> handleApplyFeesAndInterest();
+                case 8  -> handleViewCustomerAccounts();
+                case 9  -> handleRunTests();
+                case 10 -> handleSaveData();
+                case 11 -> handleConcurrentSimulation();
+                case 12 -> running = false;
             }
         }
 
@@ -190,6 +191,20 @@ public class BankController {
         } catch (Exception e) {
             printError(e.getMessage());
         }
+    }
+
+    private void handleGenerateStatement() {
+        System.out.println("\n--- GENERATE ACCOUNT STATEMENT ---");
+        System.out.print("Enter Account Number: ");
+        String accNum = inputReader.nextLine();
+
+        try {
+            InputValidator.validateAccountNumber(accNum);
+            accountService.generateAccountStatement(accNum);
+        } catch (Exception e) {
+            printError(e.getMessage());
+        }
+        inputReader.pressEnterToContinue();
     }
 
     private void handleViewTransactionHistory() {
@@ -485,14 +500,15 @@ public class BankController {
         System.out.println("  1. Create Account");
         System.out.println("  2. View Accounts");
         System.out.println("  3. Process Transaction");
-        System.out.println("  4. View Transaction History");
-        System.out.println("  5. Close Account");
-        System.out.println("  6. Apply Monthly Fees & Interest");
-        System.out.println("  7. View Customer Accounts");
-        System.out.println("  8. Run Tests");
-        System.out.println("  9. Save Data");
-        System.out.println(" 10. Run Concurrent Simulation");
-        System.out.println(" 11. Exit");
+        System.out.println("  4. Generate Account Statement");
+        System.out.println("  5. View Transaction History");
+        System.out.println("  6. Close Account");
+        System.out.println("  7. Apply Monthly Fees & Interest");
+        System.out.println("  8. View Customer Accounts");
+        System.out.println("  9. Run Tests");
+        System.out.println(" 10. Save Data");
+        System.out.println(" 11. Run Concurrent Simulation");
+        System.out.println(" 12. Exit");
         System.out.println("----------------------------------------------");
         System.out.print("Enter choice: ");
     }

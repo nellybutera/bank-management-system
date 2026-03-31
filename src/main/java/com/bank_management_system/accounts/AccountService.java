@@ -11,6 +11,7 @@ import com.bank_management_system.bank.Bank;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.exceptions.IllegalStateException;
 import com.bank_management_system.exceptions.InvalidAmountException;
+import com.bank_management_system.services.StatementGenerator;
 import com.bank_management_system.transactions.Transaction;
 import com.bank_management_system.transactions.TransactionManager;
 
@@ -138,6 +139,17 @@ public class AccountService {
      */
     public Account getAccountDetails(String accountNumber) {
         return accountManager.findAccountOrThrow(accountNumber);
+    }
+
+    /**
+     * Generates a formatted account statement for the given account using StatementGenerator.
+     * Transactions are always sorted newest-first.
+     *
+     * @param accountNumber the account number to generate a statement for
+     */
+    public void generateAccountStatement(String accountNumber) {
+        Account account = accountManager.findAccountOrThrow(accountNumber);
+        StatementGenerator.generate(account, transactionManager.getAllTransactions());
     }
 
     /**
