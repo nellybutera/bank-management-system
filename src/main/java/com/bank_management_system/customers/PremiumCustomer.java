@@ -8,6 +8,11 @@ public class PremiumCustomer extends Customer {
         super(name, age, contact, address);
     }
 
+    /** Restoration constructor — rebuilds from file data with an explicit customer ID. */
+    public PremiumCustomer(String customerId, String name, int age, String contact, String address) {
+        super(customerId, name, age, contact, address);
+    }
+
     /**
      * Returns the minimum balance required for a Premium account.
      *

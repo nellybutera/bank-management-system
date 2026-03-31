@@ -13,6 +13,12 @@ public class SavingsAccount extends Account {
         interestRate = 0.035;
     }
 
+    /** Restoration constructor — rebuilds from file data with an explicit account number and status. */
+    public SavingsAccount(String accountNumber, Customer customer, double balance, String status) {
+        super(accountNumber, customer, balance, status);
+        interestRate = 0.035;
+    }
+
     /**
      * Calculates the interest amount due based on the current balance and interest rate.
      *
@@ -54,6 +60,21 @@ public class SavingsAccount extends Account {
      */
     @Override
     public String getAccountType() { return "Savings"; }
+
+    @Override
+    public String toFileLine() {
+        return String.join("|",
+                "SAVINGS",
+                getAccountNumber(),
+                getCustomerId(),
+                getCustomerName(),
+                getCustomer().getCustomerType(),
+                String.valueOf(getCustomer().getAge()),
+                getCustomer().getContact(),
+                getCustomer().getAddress(),
+                String.valueOf(getBalance()),
+                getStatus());
+    }
 
     @Override
     protected void validateWithdrawal(double amount) {
