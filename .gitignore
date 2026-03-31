@@ -3,6 +3,9 @@ CLAUDE.md
 skills.md
 .claude/
 
+# Local developer notes — not for version control
+dev-notes.md
+Bank Account Management System (3).docx
 # Compiled output
 target/
 *.class
