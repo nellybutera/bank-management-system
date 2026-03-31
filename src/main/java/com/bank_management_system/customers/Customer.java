@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.bank_management_system.accounts.Account;
+import com.bank_management_system.utils.FunctionalUtils;
 
 public abstract class Customer {
     private final String customerId;
@@ -80,11 +81,7 @@ public abstract class Customer {
     }
 
     private double calculateTotalAssets() {
-        double total = 0;
-        for (Account acc : accounts) {
-            total += acc.getBalance();
-        }
-        return total;
+        return FunctionalUtils.totalBalance(accounts);
     }
 
     /**
