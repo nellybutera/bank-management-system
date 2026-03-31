@@ -8,6 +8,7 @@ import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
 import com.bank_management_system.exceptions.InputValidator;
 import com.bank_management_system.persistence.FilePersistenceService;
+import com.bank_management_system.utils.ConcurrencyUtils;
 import com.bank_management_system.utils.ValidationUtils;
 
 import java.io.File;
@@ -41,7 +42,7 @@ public class BankController {
         boolean running = true;
         while (running) {
             printMenu();
-            int choice = inputReader.readMenuChoice(1, 10);
+            int choice = inputReader.readMenuChoice(1, 11);
 
             switch (choice) {
                 case 1  -> handleCreateAccount();
@@ -53,7 +54,8 @@ public class BankController {
                 case 7  -> handleViewCustomerAccounts();
                 case 8  -> handleRunTests();
                 case 9  -> handleSaveData();
-                case 10 -> running = false;
+                case 10 -> handleConcurrentSimulation();
+                case 11 -> running = false;
             }
         }
 
@@ -88,6 +90,24 @@ public class BankController {
         persistenceService.saveAccounts(accountService.getAllAccounts());
         persistenceService.saveTransactions(accountService.getAllTransactions());
         System.out.println("\u2713 File save completed successfully.");
+        inputReader.pressEnterToContinue();
+    }
+
+    private void handleConcurrentSimulation() {
+        System.out.println("\n--- RUN CONCURRENT SIMULATION ---");
+        System.out.print("Enter Account Number: ");
+        String accNum = inputReader.nextLine();
+
+        try {
+            InputValidator.validateAccountNumber(accNum);
+            Account account = accountService.getAccountDetails(accNum);
+            System.out.printf("%nAccount : %s (%s — %s)%n",
+                    accNum, account.getCustomerName(), account.getAccountType());
+            System.out.printf("Balance : $%,.2f%n%n", account.getBalance());
+            ConcurrencyUtils.runSimulation(account);
+        } catch (Exception e) {
+            printError(e.getMessage());
+        }
         inputReader.pressEnterToContinue();
     }
 
@@ -417,7 +437,8 @@ public class BankController {
         System.out.println("  7. View Customer Accounts");
         System.out.println("  8. Run Tests");
         System.out.println("  9. Save Data");
-        System.out.println(" 10. Exit");
+        System.out.println(" 10. Run Concurrent Simulation");
+        System.out.println(" 11. Exit");
         System.out.println("----------------------------------------------");
         System.out.print("Enter choice: ");
     }
