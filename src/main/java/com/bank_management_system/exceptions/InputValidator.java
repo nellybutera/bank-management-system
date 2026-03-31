@@ -1,5 +1,7 @@
 package com.bank_management_system.exceptions;
 
+import com.bank_management_system.utils.ValidationUtils;
+
 public class InputValidator {
 
     private InputValidator() {
@@ -13,12 +15,7 @@ public class InputValidator {
      * @throws IllegalArgumentException if the name is blank or contains invalid characters
      */
     public static void validateName(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Name must not be blank");
-        }
-        if (!name.trim().matches("[a-zA-Z][a-zA-Z\\s\\-']*")) {
-            throw new IllegalArgumentException("Name must contain only letters, spaces, hyphens, or apostrophes");
-        }
+        ValidationUtils.validateName(name);
     }
 
     /**
@@ -82,13 +79,7 @@ public class InputValidator {
      * @throws IllegalArgumentException if the contact is blank or does not match the phone format
      */
     public static void validateContact(String contact) {
-        if (contact == null || contact.trim().isEmpty()) {
-            throw new IllegalArgumentException("Contact must not be blank");
-        }
-        if (!contact.trim().matches("[+]?[\\d][\\d\\s\\-().]{6,14}")) {
-            throw new IllegalArgumentException(
-                    "Contact must be a valid phone number (7–15 digits; may include +, -, spaces, or parentheses)");
-        }
+        ValidationUtils.validatePhone(contact);
     }
 
     /**
@@ -116,26 +107,10 @@ public class InputValidator {
      * @throws IllegalArgumentException if the account number is blank or incorrectly formatted
      */
     public static void validateAccountNumber(String accountNumber) {
-        if (accountNumber == null || accountNumber.trim().isEmpty()) {
-            throw new IllegalArgumentException("Account number must not be blank");
-        }
-        if (!accountNumber.trim().matches("(?i)ACC\\d+")) {
-            throw new IllegalArgumentException("Invalid account number format. Expected format: ACC001");
-        }
+        ValidationUtils.validateAccountNumber(accountNumber);
     }
 
-    /**
-     * Validates that a customer ID matches the expected format (e.g. CUST001).
-     *
-     * @param customerId the customer ID to validate
-     * @throws IllegalArgumentException if the customer ID is blank or incorrectly formatted
-     */
     public static void validateCustomerId(String customerId) {
-        if (customerId == null || customerId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Customer ID must not be blank");
-        }
-        if (!customerId.trim().matches("(?i)CUST\\d+")) {
-            throw new IllegalArgumentException("Invalid customer ID format. Expected format: CUST001");
-        }
+        ValidationUtils.validateCustomerId(customerId);
     }
 }
