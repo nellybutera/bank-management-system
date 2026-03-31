@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 
 public class FilePersistenceService {
 
-    private static final String ACCOUNTS_FILE     = "accounts.txt";
-    private static final String TRANSACTIONS_FILE = "transactions.txt";
+    private static final String ACCOUNTS_FILE     = "data/accounts.txt";
+    private static final String TRANSACTIONS_FILE = "data/transactions.txt";
 
     private final Bank bank;
     private final Map<String, Customer> customerCache = new HashMap<>();
@@ -38,8 +38,9 @@ public class FilePersistenceService {
                 .map(Account::toFileLine)
                 .collect(Collectors.toList());
         try {
+            Files.createDirectories(Paths.get("data"));
             Files.write(Paths.get(ACCOUNTS_FILE), lines);
-            System.out.println("Accounts saved  -> " + ACCOUNTS_FILE + " (" + lines.size() + " records)");
+            System.out.println("Accounts saved to " + ACCOUNTS_FILE);
         } catch (IOException e) {
             System.err.println("Failed to save accounts: " + e.getMessage());
         }
@@ -50,8 +51,9 @@ public class FilePersistenceService {
                 .map(Transaction::toFileLine)
                 .collect(Collectors.toList());
         try {
+            Files.createDirectories(Paths.get("data"));
             Files.write(Paths.get(TRANSACTIONS_FILE), lines);
-            System.out.println("Transactions saved -> " + TRANSACTIONS_FILE + " (" + lines.size() + " records)");
+            System.out.println("Transactions saved to " + TRANSACTIONS_FILE);
         } catch (IOException e) {
             System.err.println("Failed to save transactions: " + e.getMessage());
         }
