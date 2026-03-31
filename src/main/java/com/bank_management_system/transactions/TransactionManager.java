@@ -1,6 +1,7 @@
 package com.bank_management_system.transactions;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,10 @@ public class TransactionManager {
 
     public void addTransaction(Transaction transaction) {
         transactions.add(transaction);
+    }
+
+    public List<Transaction> getAllTransactions() {
+        return Collections.unmodifiableList(transactions);
     }
 
     public void viewTransactionsByAccount(String accountNumber, Comparator<Transaction> sortOrder) {
