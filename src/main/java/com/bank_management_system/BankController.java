@@ -95,16 +95,24 @@ public class BankController {
 
     private void handleConcurrentSimulation() {
         System.out.println("\n--- RUN CONCURRENT SIMULATION ---");
-        System.out.print("Enter Account Number: ");
-        String accNum = inputReader.nextLine();
+        System.out.println("  1. Single account thread simulation");
+        System.out.println("  2. Parallel stream batch deposit (all accounts)");
+        System.out.print("Select (1-2): ");
+        int choice = inputReader.readMenuChoice(1, 2);
 
         try {
-            InputValidator.validateAccountNumber(accNum);
-            Account account = accountService.getAccountDetails(accNum);
-            System.out.printf("%nAccount : %s (%s — %s)%n",
-                    accNum, account.getCustomerName(), account.getAccountType());
-            System.out.printf("Balance : $%,.2f%n%n", account.getBalance());
-            ConcurrencyUtils.runSimulation(account);
+            if (choice == 1) {
+                System.out.print("\nEnter Account Number: ");
+                String accNum = inputReader.nextLine();
+                InputValidator.validateAccountNumber(accNum);
+                Account account = accountService.getAccountDetails(accNum);
+                System.out.printf("%nAccount : %s (%s — %s)%n",
+                        accNum, account.getCustomerName(), account.getAccountType());
+                System.out.printf("Balance : $%,.2f%n%n", account.getBalance());
+                ConcurrencyUtils.runSimulation(account);
+            } else {
+                ConcurrencyUtils.runParallelBatchSimulation(accountService.getAllAccounts());
+            }
         } catch (Exception e) {
             printError(e.getMessage());
         }
