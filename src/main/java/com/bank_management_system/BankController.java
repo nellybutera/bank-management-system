@@ -56,7 +56,10 @@ public class BankController {
             }
         }
 
+        persistenceService.saveAccounts(accountService.getAllAccounts());
+        persistenceService.saveTransactions(accountService.getAllTransactions());
         System.out.println("\nThank you for using Bank Account Management System!");
+        System.out.println("Data automatically saved to disk.");
         System.out.println("Goodbye!");
         inputReader.close();
     }
@@ -79,10 +82,11 @@ public class BankController {
     }
 
     private void handleSaveData() {
-        System.out.println("\n--- SAVE DATA ---");
+        System.out.println("\nSAVING ACCOUNT DATA");
+        System.out.println("____________________");
         persistenceService.saveAccounts(accountService.getAllAccounts());
         persistenceService.saveTransactions(accountService.getAllTransactions());
-        System.out.println("All data saved successfully.");
+        System.out.println("\u2713 File save completed successfully.");
         inputReader.pressEnterToContinue();
     }
 

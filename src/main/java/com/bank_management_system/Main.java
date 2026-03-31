@@ -35,11 +35,12 @@ public class Main {
                 return;
             }
         } else {
-            System.out.println("Data loaded: " + loadedAccounts.size() + " account(s), "
-                    + loadedTransactions.size() + " transaction(s).");
+            System.out.println("Loading account data from files...\n");
             loadedAccounts.forEach(accountManager::addAccount);
             loadedTransactions.forEach(transactionManager::addTransaction);
             resetCounters(loadedAccounts, loadedTransactions);
+            System.out.println("\u2713 " + loadedAccounts.size() + " accounts loaded successfully from accounts.txt");
+            System.out.println("\u2713 " + loadedTransactions.size() + " transactions loaded from transactions.txt");
         }
 
         BankController controller = new BankController(accountService, customerService, inputReader, persistenceService);
