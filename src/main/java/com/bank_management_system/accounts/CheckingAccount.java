@@ -51,6 +51,7 @@ public class CheckingAccount extends Account {
                 getCustomer().getCustomerType(),
                 String.valueOf(getCustomer().getAge()),
                 getCustomer().getContact(),
+                getCustomer().getEmail(),
                 getCustomer().getAddress(),
                 String.valueOf(getBalance()),
                 getStatus(),

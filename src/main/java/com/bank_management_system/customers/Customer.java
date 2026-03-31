@@ -11,26 +11,29 @@ public abstract class Customer {
     private String name;
     private int age;
     private String contact;
+    private String email;
     private String address;
     private final List<Account> accounts;
 
     private static int customerCounter = 1;
 
-    public Customer(String name, int age, String contact, String address){
+    public Customer(String name, int age, String contact, String email, String address){
         this.customerId = String.format("CUST%03d", customerCounter++);
         this.name = name;
         this.age = age;
         this.contact = contact;
+        this.email = email;
         this.address = address;
         this.accounts = new ArrayList<>();
     }
 
     /** Restoration constructor — rebuilds a Customer from file without touching the counter. */
-    protected Customer(String customerId, String name, int age, String contact, String address) {
+    protected Customer(String customerId, String name, int age, String contact, String email, String address) {
         this.customerId = customerId;
         this.name = name;
         this.age = age;
         this.contact = contact;
+        this.email = email;
         this.address = address;
         this.accounts = new ArrayList<>();
     }
@@ -65,6 +68,12 @@ public abstract class Customer {
 
     /** Updates the customer's contact number. */
     public void setContact(String phone) { contact = phone; }
+
+    /** Returns the customer's email address. */
+    public String getEmail() { return email; }
+
+    /** Updates the customer's email address. */
+    public void setEmail(String email) { this.email = email; }
 
     /** Returns the customer's address. */
     public String getAddress() { return address; }

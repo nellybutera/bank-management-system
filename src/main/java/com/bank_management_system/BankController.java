@@ -8,6 +8,7 @@ import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
 import com.bank_management_system.exceptions.InputValidator;
 import com.bank_management_system.persistence.FilePersistenceService;
+import com.bank_management_system.utils.ValidationUtils;
 
 import java.io.File;
 
@@ -333,6 +334,8 @@ public class BankController {
         System.out.print("Enter customer contact : ");
         String contact = inputReader.nextLine();
 
+        String email = readValidatedEmail();
+
         System.out.print("Enter customer address : ");
         String address = inputReader.nextLine();
 
@@ -343,8 +346,20 @@ public class BankController {
         int customerType = inputReader.readMenuChoice(1, 2);
 
         return (customerType == 1)
-                ? customerService.registerRegularCustomer(name, age, contact, address)
-                : customerService.registerPremiumCustomer(name, age, contact, address);
+                ? customerService.registerRegularCustomer(name, age, contact, email, address)
+                : customerService.registerPremiumCustomer(name, age, contact, email, address);
+    }
+
+    private String readValidatedEmail() {
+        while (true) {
+            System.out.print("Enter customer email   : ");
+            String email = inputReader.nextLine();
+            if (ValidationUtils.isValidEmail.test(email)) {
+                System.out.println("\u2713 Email accepted!");
+                return email;
+            }
+            System.out.println("\u2717 Invalid email format. Please enter a valid address (e.g., name@example.com)");
+        }
     }
 
     private Account openAccount(Customer customer) {
