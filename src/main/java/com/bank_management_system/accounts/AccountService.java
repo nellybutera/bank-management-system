@@ -1,5 +1,6 @@
 package com.bank_management_system.accounts;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -126,6 +127,16 @@ public class AccountService {
      */
     public void displayAllAccounts() {
         accountManager.viewAllAccounts();
+    }
+
+    /** Returns all accounts currently held in memory. */
+    public Collection<Account> getAllAccounts() {
+        return accountManager.getAccounts();
+    }
+
+    /** Returns all transactions currently held in memory. */
+    public List<Transaction> getAllTransactions() {
+        return transactionManager.getAllTransactions();
     }
 
     /**
