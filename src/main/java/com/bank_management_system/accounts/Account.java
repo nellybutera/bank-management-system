@@ -78,7 +78,7 @@ public abstract class Account implements Transactable {
         if (amount <= 0) {
             throw new InvalidAmountException("Deposit must be greater than zero");
         }
-        balance += amount;
+        updateBalance(amount);
         return new Transaction(accountNumber, "DEPOSIT", amount, balance);
     }
 
@@ -99,7 +99,7 @@ public abstract class Account implements Transactable {
             throw new InvalidAmountException("Withdrawal amount must be greater than zero.");
         }
         validateWithdrawal(amount);
-        balance -= amount;
+        updateBalance(-amount);
         return new Transaction(accountNumber, "WITHDRAWAL", amount, balance);
     }
 
@@ -126,6 +126,15 @@ public abstract class Account implements Transactable {
             System.out.println("Transaction failed: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Updates the account balance by the given delta.
+     * Synchronized to ensure only one thread modifies the balance at a time,
+     * preventing race conditions during concurrent transactions.
+     */
+    private synchronized void updateBalance(double delta) {
+        this.balance += delta;
     }
 
     /**
