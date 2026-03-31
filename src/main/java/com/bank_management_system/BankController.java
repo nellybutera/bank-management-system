@@ -119,12 +119,22 @@ public class BankController {
             System.out.printf("Current Balance: $%,.2f%n", account.getBalance());
             System.out.println();
 
-            accountService.getTransactionHistory(accNum);
+            String sortBy = readSortPreference();
+            accountService.getTransactionHistory(accNum, sortBy);
 
         } catch (Exception e) {
             printError(e.getMessage());
         }
         inputReader.pressEnterToContinue();
+    }
+
+    private String readSortPreference() {
+        System.out.println("Sort transactions by:");
+        System.out.println("  1. Date (newest first)");
+        System.out.println("  2. Amount (highest first)");
+        System.out.print("Select (1-2): ");
+        int choice = inputReader.readMenuChoice(1, 2);
+        return choice == 2 ? "AMOUNT" : "DATE";
     }
 
     private void handleCreateAccount() {
