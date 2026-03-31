@@ -99,7 +99,8 @@ public final class Transaction {
      * Example: TXN001 | 30-10-2025 10:30 AM | DEPOSIT | +$1,500.00 | $6,750.00
      */
     public void displayTransactionDetails() {
-        String amountStr = type.equalsIgnoreCase("DEPOSIT")
+        boolean isCredit = type.equalsIgnoreCase("DEPOSIT") || type.equalsIgnoreCase("TRANSFER_IN");
+        String amountStr = isCredit
                 ? String.format("+$%,.2f", amount)
                 : String.format("-$%,.2f", amount);
 

@@ -73,6 +73,40 @@ public class AccountService {
     }
 
     /**
+     * Transfers a given amount from one account to another.
+     * Records a TRANSFER_OUT transaction on the source and a TRANSFER_IN on the destination.
+     *
+     * @param fromAccountNumber the account to debit
+     * @param toAccountNumber   the account to credit
+     * @param amount            the amount to transfer (must be greater than zero)
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if both account numbers are the same
+     * @throws com.bank_management_system.exceptions.IllegalStateException    if either account is closed
+     * @throws com.bank_management_system.exceptions.InsufficientFundsException if the source lacks sufficient funds
+     */
+    public void transfer(String fromAccountNumber, String toAccountNumber, double amount) {
+        if (fromAccountNumber.equalsIgnoreCase(toAccountNumber)) {
+            throw new com.bank_management_system.exceptions.IllegalArgumentException(
+                    "Cannot transfer to the same account.");
+        }
+
+        Account source      = accountManager.findAccountOrThrow(fromAccountNumber);
+        Account destination = accountManager.findAccountOrThrow(toAccountNumber);
+
+        if ("Closed".equalsIgnoreCase(destination.getStatus())) {
+            throw new com.bank_management_system.exceptions.IllegalStateException(
+                    "Cannot transfer to a closed account: " + toAccountNumber);
+        }
+
+        source.withdraw(amount);
+        destination.deposit(amount);
+
+        transactionManager.addTransaction(
+                new Transaction(fromAccountNumber, "TRANSFER_OUT", amount, source.getBalance()));
+        transactionManager.addTransaction(
+                new Transaction(toAccountNumber, "TRANSFER_IN", amount, destination.getBalance()));
+    }
+
+    /**
      * Processes a deposit or withdrawal on the specified account and records the transaction.
      *
      * @param accountNumber the account to transact on
