@@ -20,11 +20,11 @@ public class DataInitializer {
      * @param customerService the service used to register customers
      */
     public static void initializeSampleData(AccountService accountService, CustomerService customerService) {
-        RegularCustomer c1 = customerService.registerRegularCustomer("John Smith",    35, "555-1234", "123 Main St, Springfield");
-        RegularCustomer c2 = customerService.registerRegularCustomer("Sarah Johnson", 28, "555-2345", "456 Oak Ave, Riverside");
-        PremiumCustomer c3 = customerService.registerPremiumCustomer("Michael Chen",  42, "555-3456", "789 Pine Rd, Lakewood");
-        RegularCustomer c4 = customerService.registerRegularCustomer("Emily Brown",   31, "555-4567", "321 Elm St, Hillside");
-        RegularCustomer c5 = customerService.registerRegularCustomer("David Wilson",  55, "555-5678", "654 Maple Dr, Westfield");
+        RegularCustomer c1 = customerService.registerRegularCustomer("John Smith",    35, "555-1234", "john.smith@email.com",    "123 Main St, Springfield");
+        RegularCustomer c2 = customerService.registerRegularCustomer("Sarah Johnson", 28, "555-2345", "sarah.j@email.com",        "456 Oak Ave, Riverside");
+        PremiumCustomer c3 = customerService.registerPremiumCustomer("Michael Chen",  42, "555-3456", "m.chen@premiumbank.com",   "789 Pine Rd, Lakewood");
+        RegularCustomer c4 = customerService.registerRegularCustomer("Emily Brown",   31, "555-4567", "emily.brown@email.com",    "321 Elm St, Hillside");
+        RegularCustomer c5 = customerService.registerRegularCustomer("David Wilson",  55, "555-5678", "david.wilson@email.com",   "654 Maple Dr, Westfield");
 
         accountService.createSavingsAccount(c1.getCustomerId(),  5_250.00);
         accountService.createSavingsAccount(c2.getCustomerId(), 3_450.00);

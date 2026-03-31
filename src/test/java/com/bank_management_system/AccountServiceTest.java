@@ -39,8 +39,8 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
-        regularCustomer = new RegularCustomer("Test User", 30, "555-0000", "123 Test St");
-        premiumCustomer = new PremiumCustomer("VIP User",  40, "555-1111", "456 VIP Ave");
+        regularCustomer = new RegularCustomer("Test User", 30, "555-0000", "test@email.com", "123 Test St");
+        premiumCustomer = new PremiumCustomer("VIP User", 40, "555-1111", "vip@email.com", "456 VIP Ave");
         savingsAccount  = new SavingsAccount(regularCustomer, 1000.00);
     }
 

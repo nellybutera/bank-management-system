@@ -116,14 +116,15 @@ public class FilePersistenceService {
         String custType  = p[4];
         int    age       = Integer.parseInt(p[5]);
         String contact   = p[6];
-        String address   = p[7];
-        double balance   = Double.parseDouble(p[8]);
-        String status    = p[9];
+        String email     = p[7];
+        String address   = p[8];
+        double balance   = Double.parseDouble(p[9]);
+        String status    = p[10];
 
         Customer customer = customerCache.computeIfAbsent(custId, id -> {
             Customer c = custType.equals("Premium")
-                    ? new PremiumCustomer(id, custName, age, contact, address)
-                    : new RegularCustomer(id, custName, age, contact, address);
+                    ? new PremiumCustomer(id, custName, age, contact, email, address)
+                    : new RegularCustomer(id, custName, age, contact, email, address);
             bank.addCustomer(c);
             return c;
         });
@@ -132,7 +133,7 @@ public class FilePersistenceService {
         if (type.equals("SAVINGS")) {
             account = new SavingsAccount(accNum, customer, balance, status);
         } else {
-            boolean feesWaived = Boolean.parseBoolean(p[10]);
+            boolean feesWaived = Boolean.parseBoolean(p[11]);
             account = new CheckingAccount(accNum, customer, balance, status, feesWaived);
         }
 
