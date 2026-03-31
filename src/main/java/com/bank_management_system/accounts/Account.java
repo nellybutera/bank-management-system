@@ -23,6 +23,19 @@ public abstract class Account implements Transactable {
         this.status = "Active";
     }
 
+    /** Restoration constructor — rebuilds an Account from file without touching the counter. */
+    protected Account(String accountNumber, Customer customer, double balance, String status) {
+        this.accountNumber = accountNumber;
+        this.customer = customer;
+        this.balance = balance;
+        this.status = status;
+    }
+
+    /** Sets the account ID counter so the next new account gets the correct ID after loading from file. */
+    public static void resetCounter(int value) {
+        accountCounter = value;
+    }
+
     /** Returns the unique account number (e.g. ACC001). */
     public String getAccountNumber() { return accountNumber; }
 
@@ -46,6 +59,9 @@ public abstract class Account implements Transactable {
 
     /** Returns the account type label (e.g. "Savings" or "Checking"). */
     public abstract String getAccountType();
+
+    /** Serializes this account to a pipe-delimited line for file storage. */
+    public abstract String toFileLine();
 
     /**
      * Deposits the given amount into the account.

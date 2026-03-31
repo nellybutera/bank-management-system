@@ -18,6 +18,14 @@ public class CheckingAccount extends Account {
         this.feesWaived = feesWaived;
     }
 
+    /** Restoration constructor — rebuilds from file data with an explicit account number and status. */
+    public CheckingAccount(String accountNumber, Customer customer, double balance, String status, boolean feesWaived) {
+        super(accountNumber, customer, balance, status);
+        overdraftLimit = 1000;
+        monthlyFee = 10;
+        this.feesWaived = feesWaived;
+    }
+
     /**
      * Returns whether the monthly fee is waived for this account.
      *
@@ -32,6 +40,22 @@ public class CheckingAccount extends Account {
      */
     @Override
     public String getAccountType() { return "Checking"; }
+
+    @Override
+    public String toFileLine() {
+        return String.join("|",
+                "CHECKING",
+                getAccountNumber(),
+                getCustomerId(),
+                getCustomerName(),
+                getCustomer().getCustomerType(),
+                String.valueOf(getCustomer().getAge()),
+                getCustomer().getContact(),
+                getCustomer().getAddress(),
+                String.valueOf(getBalance()),
+                getStatus(),
+                String.valueOf(feesWaived));
+    }
 
     /**
      * Deducts the monthly fee from the account balance if fees are not waived.

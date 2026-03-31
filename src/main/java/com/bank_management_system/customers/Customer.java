@@ -25,6 +25,21 @@ public abstract class Customer {
         this.accounts = new ArrayList<>();
     }
 
+    /** Restoration constructor — rebuilds a Customer from file without touching the counter. */
+    protected Customer(String customerId, String name, int age, String contact, String address) {
+        this.customerId = customerId;
+        this.name = name;
+        this.age = age;
+        this.contact = contact;
+        this.address = address;
+        this.accounts = new ArrayList<>();
+    }
+
+    /** Sets the customer ID counter so the next new customer gets the correct ID after loading from file. */
+    public static void resetCounter(int value) {
+        customerCounter = value;
+    }
+
     /** Returns true if this customer qualifies for a monthly fee waiver. Default is false. */
     public boolean isEligibleForFeeWaiver() {
         return false;
