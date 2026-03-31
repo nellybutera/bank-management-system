@@ -11,9 +11,9 @@ import com.bank_management_system.utils.FunctionalUtils;
 
 public class TransactionManager {
 
-    private final List<Transaction> transactions = new ArrayList<>();
+    private final List<Transaction> transactions = Collections.synchronizedList(new ArrayList<>());
 
-    public void addTransaction(Transaction transaction) {
+    public synchronized void addTransaction(Transaction transaction) {
         transactions.add(transaction);
     }
 
