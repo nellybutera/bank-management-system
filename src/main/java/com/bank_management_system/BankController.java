@@ -7,6 +7,7 @@ import com.bank_management_system.accounts.SavingsAccount;
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.customers.CustomerService;
 import com.bank_management_system.exceptions.InputValidator;
+import com.bank_management_system.persistence.FilePersistenceService;
 
 import java.io.File;
 
@@ -19,11 +20,14 @@ public class BankController {
     private final AccountService accountService;
     private final CustomerService customerService;
     private final InputReader inputReader;
+    private final FilePersistenceService persistenceService;
 
-    public BankController(AccountService accountService, CustomerService customerService, InputReader inputReader) {
-        this.accountService  = accountService;
-        this.customerService = customerService;
-        this.inputReader     = inputReader;
+    public BankController(AccountService accountService, CustomerService customerService,
+                          InputReader inputReader, FilePersistenceService persistenceService) {
+        this.accountService     = accountService;
+        this.customerService    = customerService;
+        this.inputReader        = inputReader;
+        this.persistenceService = persistenceService;
     }
 
     /**
@@ -36,18 +40,19 @@ public class BankController {
         boolean running = true;
         while (running) {
             printMenu();
-            int choice = inputReader.readMenuChoice(1, 9);
+            int choice = inputReader.readMenuChoice(1, 10);
 
             switch (choice) {
-                case 1 -> handleCreateAccount();
-                case 2 -> handleViewAccounts();
-                case 3 -> handleProcessTransaction();
-                case 4 -> handleViewTransactionHistory();
-                case 5 -> handleCloseAccount();
-                case 6 -> handleApplyFeesAndInterest();
-                case 7 -> handleViewCustomerAccounts();
-                case 8 -> handleRunTests();
-                case 9 -> running = false;
+                case 1  -> handleCreateAccount();
+                case 2  -> handleViewAccounts();
+                case 3  -> handleProcessTransaction();
+                case 4  -> handleViewTransactionHistory();
+                case 5  -> handleCloseAccount();
+                case 6  -> handleApplyFeesAndInterest();
+                case 7  -> handleViewCustomerAccounts();
+                case 8  -> handleRunTests();
+                case 9  -> handleSaveData();
+                case 10 -> running = false;
             }
         }
 
@@ -70,6 +75,14 @@ public class BankController {
         } catch (Exception e) {
             printError("Could not run tests: " + e.getMessage());
         }
+        inputReader.pressEnterToContinue();
+    }
+
+    private void handleSaveData() {
+        System.out.println("\n--- SAVE DATA ---");
+        persistenceService.saveAccounts(accountService.getAllAccounts());
+        persistenceService.saveTransactions(accountService.getAllTransactions());
+        System.out.println("All data saved successfully.");
         inputReader.pressEnterToContinue();
     }
 
@@ -384,7 +397,8 @@ public class BankController {
         System.out.println("  6. Apply Monthly Fees & Interest");
         System.out.println("  7. View Customer Accounts");
         System.out.println("  8. Run Tests");
-        System.out.println("  9. Exit");
+        System.out.println("  9. Save Data");
+        System.out.println(" 10. Exit");
         System.out.println("----------------------------------------------");
         System.out.print("Enter choice: ");
     }
