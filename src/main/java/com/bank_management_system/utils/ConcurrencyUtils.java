@@ -47,7 +47,7 @@ public class ConcurrencyUtils {
         System.out.printf("Final Balance    : $%,.2f%n", account.getBalance());
         System.out.printf("Expected Balance : $%,.2f%n", expectedBalance);
         System.out.printf("Correct          : %s%n",
-                account.getBalance() == expectedBalance ? "YES \u2713" : "NO \u2717 (race condition detected)");
+                Math.abs(account.getBalance() - expectedBalance) < 0.001 ? "YES \u2713" : "NO \u2717 (race condition detected)");
     }
 
     /**
