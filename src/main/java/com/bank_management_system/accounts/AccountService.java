@@ -195,7 +195,7 @@ public class AccountService {
     public void closeAccount(String accountNumber) {
         Account account = accountManager.findAccountOrThrow(accountNumber);
 
-        if (account.getBalance() != 0) {
+        if (Math.abs(account.getBalance()) > 0.001) {
             throw new IllegalStateException("Withdraw all funds before closing.");
         }
 
