@@ -41,22 +41,17 @@ public class BankController {
 
         boolean running = true;
         while (running) {
-            printMenu();
-            int choice = inputReader.readMenuChoice(1, 12);
+            printMainMenu();
+            int choice = inputReader.readMenuChoice(1, 7);
 
             switch (choice) {
-                case 1  -> handleCreateAccount();
-                case 2  -> handleViewAccounts();
-                case 3  -> handleProcessTransaction();
-                case 4  -> handleGenerateStatement();
-                case 5  -> handleViewTransactionHistory();
-                case 6  -> handleCloseAccount();
-                case 7  -> handleApplyFeesAndInterest();
-                case 8  -> handleViewCustomerAccounts();
-                case 9  -> handleRunTests();
-                case 10 -> handleSaveData();
-                case 11 -> handleConcurrentSimulation();
-                case 12 -> running = false;
+                case 1 -> handleManageAccounts();
+                case 2 -> handleProcessTransaction();
+                case 3 -> handleAccountStatements();
+                case 4 -> handleSaveData();
+                case 5 -> handleConcurrentSimulation();
+                case 6 -> handleRunTests();
+                case 7 -> running = false;
             }
         }
 
@@ -66,6 +61,37 @@ public class BankController {
         System.out.println("Data automatically saved to disk.");
         System.out.println("Goodbye!");
         inputReader.close();
+    }
+
+    // ── grouped sub-menu handlers ──────────────────────────────────────────────
+
+    private void handleManageAccounts() {
+        boolean inMenu = true;
+        while (inMenu) {
+            printManageAccountsMenu();
+            int choice = inputReader.readMenuChoice(0, 5);
+            switch (choice) {
+                case 1 -> handleCreateAccount();
+                case 2 -> handleViewAccounts();
+                case 3 -> handleViewCustomerAccounts();
+                case 4 -> handleCloseAccount();
+                case 5 -> handleApplyFeesAndInterest();
+                case 0 -> inMenu = false;
+            }
+        }
+    }
+
+    private void handleAccountStatements() {
+        boolean inMenu = true;
+        while (inMenu) {
+            printAccountStatementsMenu();
+            int choice = inputReader.readMenuChoice(0, 2);
+            switch (choice) {
+                case 1 -> handleGenerateStatement();
+                case 2 -> handleViewTransactionHistory();
+                case 0 -> inMenu = false;
+            }
+        }
     }
 
     // ── menu handlers ──────────────────────────────────────────────────────────
@@ -494,22 +520,37 @@ public class BankController {
         System.out.println("==============================================");
     }
 
-    private void printMenu() {
-        System.out.println("                MAIN MENU                     ");
-        System.out.println("----------------------------------------------");
+    private void printMainMenu() {
+        System.out.println("\n==============================================");
+        System.out.println("               MAIN MENU                      ");
+        System.out.println("==============================================");
+        System.out.println("  1. Manage Accounts");
+        System.out.println("  2. Perform Transactions");
+        System.out.println("  3. Account Statements");
+        System.out.println("  4. Save Data");
+        System.out.println("  5. Run Concurrent Simulation");
+        System.out.println("  6. Run Tests");
+        System.out.println("  7. Exit");
+        System.out.println("==============================================");
+        System.out.print("Enter choice: ");
+    }
+
+    private void printManageAccountsMenu() {
+        System.out.println("\n--- MANAGE ACCOUNTS ---");
         System.out.println("  1. Create Account");
-        System.out.println("  2. View Accounts");
-        System.out.println("  3. Process Transaction");
-        System.out.println("  4. Generate Account Statement");
-        System.out.println("  5. View Transaction History");
-        System.out.println("  6. Close Account");
-        System.out.println("  7. Apply Monthly Fees & Interest");
-        System.out.println("  8. View Customer Accounts");
-        System.out.println("  9. Run Tests");
-        System.out.println(" 10. Save Data");
-        System.out.println(" 11. Run Concurrent Simulation");
-        System.out.println(" 12. Exit");
-        System.out.println("----------------------------------------------");
+        System.out.println("  2. View All Accounts");
+        System.out.println("  3. View Customer Accounts");
+        System.out.println("  4. Close Account");
+        System.out.println("  5. Apply Monthly Fees & Interest");
+        System.out.println("  0. Back to Main Menu");
+        System.out.print("Enter choice: ");
+    }
+
+    private void printAccountStatementsMenu() {
+        System.out.println("\n--- ACCOUNT STATEMENTS ---");
+        System.out.println("  1. Generate Account Statement");
+        System.out.println("  2. View Transaction History");
+        System.out.println("  0. Back to Main Menu");
         System.out.print("Enter choice: ");
     }
 

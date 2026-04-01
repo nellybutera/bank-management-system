@@ -20,18 +20,26 @@ A console-based Java application that simulates core banking operations — crea
 
 On startup the application loads saved data from `data/accounts.txt` and `data/transactions.txt` (created automatically on first save). If no save file exists, five sample customers and six accounts are pre-loaded. From the main menu a user (bank staff) can:
 
-1. **Create Account** — open an account for an existing customer by ID, or register a brand-new Regular or Premium customer; choose a Savings or Checking account and set an initial deposit
-2. **View Accounts** — display all accounts in a formatted table with balances and a bank-wide total
-3. **Process Transaction** — deposit, withdraw, or transfer between accounts; confirmation prompt before execution
-4. **Generate Account Statement** — formatted statement sorted newest-first with totals and net change
-5. **View Transaction History** — same transactions with choice of sort order (date or amount)
-6. **Close Account** — soft-delete an account (sets status to `Closed`; requires zero balance; preserves full transaction history)
-7. **Apply Monthly Fees & Interest** — batch operation: deducts $10 from non-waived Checking accounts and credits 3.5% interest to active Savings accounts; all movements are logged to the ledger
-8. **View Customer Accounts** — look up all accounts owned by a specific customer by ID
-9. **Run Tests** — executes the full JUnit test suite via Maven and streams the formatted PASSED/FAILED results directly to the console
-10. **Save Data** — writes all accounts and transactions to pipe-delimited flat files under `data/`
-11. **Run Concurrent Simulation** — demonstrates thread safety; choose single-account multi-thread race or parallel-stream batch deposit across all accounts
-12. **Exit** — auto-saves all data and closes the application
+1. **Manage Accounts** — sub-menu grouping all account lifecycle operations:
+   - Create Account — register a new or existing customer and open a Savings or Checking account
+   - View All Accounts — formatted table of all accounts with balances and a bank-wide total
+   - View Customer Accounts — look up all accounts owned by a customer ID
+   - Close Account — soft-delete (requires zero balance; preserves full transaction history)
+   - Apply Monthly Fees & Interest — deducts $10 from non-waived Checking accounts; credits 3.5% interest to active Savings accounts
+
+2. **Perform Transactions** — deposit, withdrawal, or transfer between accounts with a confirmation prompt
+
+3. **Account Statements** — sub-menu for reporting:
+   - Generate Account Statement — formatted statement sorted newest-first, with totals and net change
+   - View Transaction History — same data with choice of sort order (date or amount)
+
+4. **Save Data** — writes all accounts and transactions to pipe-delimited flat files under `data/`
+
+5. **Run Concurrent Simulation** — demonstrates thread safety; single-account multi-thread race or parallel-stream batch deposit across all accounts
+
+6. **Run Tests** — executes the full JUnit test suite via Maven and streams PASSED/FAILED results to the console
+
+7. **Exit** — auto-saves all data and closes the application
 
 ---
 
