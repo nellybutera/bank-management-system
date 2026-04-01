@@ -25,7 +25,6 @@ public class FilePersistenceService {
     private static final String TRANSACTIONS_FILE = "data/transactions.txt";
 
     private final Bank bank;
-    private final Map<String, Customer> customerCache = new HashMap<>();
 
     public FilePersistenceService(Bank bank) {
         this.bank = bank;
@@ -70,10 +69,11 @@ public class FilePersistenceService {
      */
     public List<Account> loadAccounts() {
         if (!Files.exists(Paths.get(ACCOUNTS_FILE))) return Collections.emptyList();
+        Map<String, Customer> customerCache = new HashMap<>();
         try {
             return Files.lines(Paths.get(ACCOUNTS_FILE))
                     .filter(line -> !line.isBlank())
-                    .map(this::parseAccount)
+                    .map(line -> parseAccount(line, customerCache))
                     .collect(Collectors.toList());
         } catch (IOException e) {
             System.err.println("Failed to load accounts: " + e.getMessage());
@@ -104,10 +104,15 @@ public class FilePersistenceService {
 
     /**
      * Parses a single pipe-delimited account line and reconstructs the Account object.
-     * Format (Savings):  SAVINGS|accNum|custId|custName|custType|age|contact|address|balance|status
-     * Format (Checking): CHECKING|accNum|custId|custName|custType|age|contact|address|balance|status|feesWaived
+     * Format (Savings):  SAVINGS|accNum|custId|custName|custType|age|contact|email|address|balance|status
+     * Format (Checking): CHECKING|accNum|custId|custName|custType|age|contact|email|address|balance|status|feesWaived
+     *
+     * @param line          the raw pipe-delimited line from accounts.txt
+     * @param customerCache a session-scoped cache used to avoid creating duplicate Customer objects
+     *                      when multiple accounts share the same customer ID
+     * @return the reconstructed Account (SavingsAccount or CheckingAccount)
      */
-    private Account parseAccount(String line) {
+    private Account parseAccount(String line, Map<String, Customer> customerCache) {
         String[] p       = line.split("\\|");
         String type      = p[0];
         String accNum    = p[1];
