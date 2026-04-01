@@ -113,4 +113,14 @@ public class InputValidator {
     public static void validateCustomerId(String customerId) {
         ValidationUtils.validateCustomerId(customerId);
     }
+
+    /**
+     * Validates that an email address is non-blank and matches a standard email format.
+     *
+     * @param email the email address to validate
+     * @throws IllegalArgumentException if the email is blank or does not match the expected format
+     */
+    public static void validateEmail(String email) {
+        ValidationUtils.validateEmail(email);
+    }
 }
