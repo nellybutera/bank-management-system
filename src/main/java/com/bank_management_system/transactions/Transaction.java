@@ -4,21 +4,36 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+/**
+ * Immutable record of a single financial event on an account.
+ * All fields are {@code final} — a Transaction cannot be altered after creation,
+ * making it safe to share across threads and to pass into streams without defensive copying.
+ *
+ * <p>Supported types: {@code DEPOSIT}, {@code WITHDRAWAL}, {@code TRANSFER_IN}, {@code TRANSFER_OUT}.</p>
+ */
 public final class Transaction {
 
-    private String transactionId;
-    private String accountNumber;
-    private String type;
-    private double amount;
-    private double balanceAfter;
-    private LocalDateTime createdAt;
-    private String timestamp;
+    private final String transactionId;
+    private final String accountNumber;
+    private final String type;
+    private final double amount;
+    private final double balanceAfter;
+    private final LocalDateTime createdAt;
+    private final String timestamp;
 
     private static int transactionCounter = 1;
 
     private static final DateTimeFormatter FORMATTED_DATE_TIME =
             DateTimeFormatter.ofPattern("dd-MM-yyyy hh:mm a", Locale.ENGLISH);
 
+    /**
+     * Creates a new transaction and auto-assigns the next sequential ID.
+     *
+     * @param accountNumber the account this transaction belongs to
+     * @param type          the transaction type (DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT)
+     * @param amount        the transaction amount (must be positive)
+     * @param balanceAfter  the account balance immediately after this transaction
+     */
     public Transaction(String accountNumber, String type, Double amount, double balanceAfter) {
         this.transactionId = String.format("TXN%03d", transactionCounter++);
         this.accountNumber = accountNumber;
