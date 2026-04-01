@@ -6,8 +6,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.bank_management_system.customers.Customer;
-import com.bank_management_system.exceptions.AccountNotFoundException;
+import com.bank_management_system.exceptions.CustomerNotFoundException;
 
+/**
+ * Central registry that owns the collection of all customers in the system.
+ * Accounts are managed separately by {@link com.bank_management_system.accounts.AccountManager};
+ * Bank is responsible only for customer lookup and registration.
+ */
 public class Bank {
     private final Map<String, Customer> customers = new HashMap<>();
 
@@ -25,12 +30,12 @@ public class Bank {
      *
      * @param customerId the ID to search for
      * @return the matching Customer
-     * @throws AccountNotFoundException if no customer with the given ID exists
+     * @throws CustomerNotFoundException if no customer with the given ID exists
      */
-    public Customer findCustomerById(String customerId) throws AccountNotFoundException {
+    public Customer findCustomerById(String customerId) {
         Customer customer = customers.get(customerId);
         if (customer == null) {
-            throw new AccountNotFoundException("Customer not found with ID: " + customerId);
+            throw new CustomerNotFoundException("Customer not found: " + customerId);
         }
         return customer;
     }
