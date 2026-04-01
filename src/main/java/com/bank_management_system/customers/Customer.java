@@ -6,6 +6,14 @@ import java.util.List;
 import com.bank_management_system.accounts.Account;
 import com.bank_management_system.utils.FunctionalUtils;
 
+/**
+ * Abstract base class representing a bank customer.
+ * Subclasses ({@link RegularCustomer}, {@link PremiumCustomer}) define tier-specific behaviour
+ * such as fee waiver eligibility and minimum balance requirements.
+ *
+ * <p>Each customer owns an {@link java.util.ArrayList} of linked accounts, which grows
+ * dynamically as new accounts are opened.</p>
+ */
 public abstract class Customer {
     private final String customerId;
     private String name;

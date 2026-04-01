@@ -4,8 +4,6 @@ import java.util.Collection;
 
 import com.bank_management_system.bank.Bank;
 import com.bank_management_system.exceptions.InputValidator;
-import com.bank_management_system.exceptions.InvalidAmountException;
-import com.bank_management_system.utils.ValidationUtils;
 
 public class CustomerService {
     private final Bank bank;
@@ -56,11 +54,11 @@ public class CustomerService {
         return bank.getAllCustomers();
     }
 
-    private void validateInput(String name, int age, String contact, String email, String address){
-        ValidationUtils.validateName(name);
+    private void validateInput(String name, int age, String contact, String email, String address) {
+        InputValidator.validateName(name);
         InputValidator.validateAge(age);
-        ValidationUtils.validatePhone(contact);
-        ValidationUtils.validateEmail(email);
+        InputValidator.validateContact(contact);
+        InputValidator.validateEmail(email);
         InputValidator.validateAddress(address);
     }
 }
