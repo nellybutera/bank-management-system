@@ -12,8 +12,18 @@ import com.bank_management_system.transactions.TransactionManager;
 
 import java.util.List;
 
+/**
+ * Entry point for the Bank Account Management System.
+ * Bootstraps all services, restores persisted data (or loads sample data on first run),
+ * then hands control to {@link BankController} for the interactive menu loop.
+ */
 public class Main {
 
+    /**
+     * Wires up the service layer, loads persisted data, and starts the application.
+     *
+     * @param args command-line arguments (not used)
+     */
     public static void main(String[] args) {
         Bank               bank               = new Bank();
         AccountManager     accountManager     = new AccountManager();
@@ -47,6 +57,13 @@ public class Main {
         controller.start();
     }
 
+    /**
+     * Advances the auto-increment counters for Account, Customer, and Transaction IDs
+     * so that new records created after a file load never collide with restored ones.
+     *
+     * @param accounts     the accounts loaded from file
+     * @param transactions the transactions loaded from file
+     */
     private static void resetCounters(List<Account> accounts, List<Transaction> transactions) {
         int maxAcc = accounts.stream()
                 .mapToInt(a -> Integer.parseInt(a.getAccountNumber().substring(3)))

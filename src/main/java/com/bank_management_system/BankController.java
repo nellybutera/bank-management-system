@@ -65,6 +65,7 @@ public class BankController {
 
     // ── grouped sub-menu handlers ──────────────────────────────────────────────
 
+    /** Runs the Manage Accounts sub-menu loop (create, view, close, fees & interest). */
     private void handleManageAccounts() {
         boolean inMenu = true;
         while (inMenu) {
@@ -81,6 +82,7 @@ public class BankController {
         }
     }
 
+    /** Runs the Account Statements sub-menu loop (generate statement, view transaction history). */
     private void handleAccountStatements() {
         boolean inMenu = true;
         while (inMenu) {
@@ -96,6 +98,7 @@ public class BankController {
 
     // ── menu handlers ──────────────────────────────────────────────────────────
 
+    /** Launches the full JUnit test suite via Maven and streams output to the console. */
     private void handleRunTests() {
         System.out.println("\n--- RUN TEST SUITE ---");
         System.out.println("Launching JUnit tests via Maven...\n");
@@ -111,6 +114,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Persists all accounts and transactions to disk immediately. */
     private void handleSaveData() {
         System.out.println("\nSAVING ACCOUNT DATA");
         System.out.println("____________________");
@@ -120,6 +124,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Prompts for a simulation type and delegates to {@link com.bank_management_system.utils.ConcurrencyUtils}. */
     private void handleConcurrentSimulation() {
         System.out.println("\n--- RUN CONCURRENT SIMULATION ---");
         System.out.println("  1. Single account thread simulation");
@@ -146,12 +151,14 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Displays a formatted table of all bank accounts. */
     private void handleViewAccounts() {
         System.out.println("\n--- ALL BANK ACCOUNTS ---");
         accountService.displayAllAccounts();
         inputReader.pressEnterToContinue();
     }
 
+    /** Collects account number, transaction type, and amount, then delegates to the service layer. */
     private void handleProcessTransaction() {
         System.out.println("\n--- PROCESS TRANSACTION ---");
         System.out.print("Enter Account Number: ");
@@ -185,6 +192,13 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /**
+     * Collects the destination account and transfer amount, confirms with the user,
+     * then delegates to {@link com.bank_management_system.accounts.AccountService#transfer}.
+     *
+     * @param fromAccNum  the source account number (already validated by the caller)
+     * @param fromBalance the source account's balance before the transfer (for the confirmation display)
+     */
     private void handleTransfer(String fromAccNum, double fromBalance) {
         System.out.print("Enter destination Account Number: ");
         String toAccNum = inputReader.nextLine();
@@ -219,6 +233,7 @@ public class BankController {
         }
     }
 
+    /** Reads an account number and prints its full account statement via {@link com.bank_management_system.services.StatementGenerator}. */
     private void handleGenerateStatement() {
         System.out.println("\n--- GENERATE ACCOUNT STATEMENT ---");
         System.out.print("Enter Account Number: ");
@@ -233,6 +248,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Reads an account number and sort preference, then displays the transaction history table. */
     private void handleViewTransactionHistory() {
         System.out.println("\n--- VIEW TRANSACTION HISTORY ---");
         System.out.print("Enter Account Number: ");
@@ -256,6 +272,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Prompts the user to choose a sort order and returns "DATE" or "AMOUNT". */
     private String readSortPreference() {
         System.out.println("Sort transactions by:");
         System.out.println("  1. Date (newest first)");
@@ -265,6 +282,7 @@ public class BankController {
         return choice == 2 ? "AMOUNT" : "DATE";
     }
 
+    /** Handles account creation — either for an existing customer or by registering a new one. */
     private void handleCreateAccount() {
         System.out.println("\n--- ACCOUNT CREATION ---");
         System.out.print("Is this an existing customer? (Y/N): ");
@@ -286,6 +304,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Confirms balance is zero, prompts for confirmation, then closes the account. */
     private void handleCloseAccount() {
         System.out.println("\n--- CLOSE ACCOUNT ---");
         System.out.print("Enter Account Number: ");
@@ -300,7 +319,7 @@ public class BankController {
                     account.getCustomerName(), account.getAccountType(),
                     account.getBalance(), account.getStatus());
 
-            if (account.getBalance() != 0) {
+            if (Math.abs(account.getBalance()) > 0.001) {
                 printError(String.format(
                         "Cannot close account. Balance must be $0.00 before closing. Current balance: $%,.2f",
                         account.getBalance()));
@@ -323,6 +342,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Confirms with the user, then applies monthly fees to all eligible Checking accounts and credits interest to all active Savings accounts. */
     private void handleApplyFeesAndInterest() {
         System.out.println("\n--- APPLY MONTHLY FEES & INTEREST ---");
         System.out.println("This operation will:");
@@ -348,6 +368,7 @@ public class BankController {
         inputReader.pressEnterToContinue();
     }
 
+    /** Looks up a customer by ID and displays their account portfolio. */
     private void handleViewCustomerAccounts() {
         System.out.println("\n--- VIEW CUSTOMER ACCOUNTS ---");
         System.out.print("Enter Customer ID (e.g. CUST001): ");
@@ -374,12 +395,14 @@ public class BankController {
 
     // ── handleProcessTransaction helpers ───────────────────────────────────────
 
+    /** Prints a one-line account summary (customer name, type, current balance) before a transaction. */
     private void printAccountSummary(Account account) {
         System.out.println("\nAccount Details:");
         System.out.printf("Customer: %s | Account Type: %s | Current Balance: $%,.2f%n",
                 account.getCustomerName(), account.getAccountType(), account.getBalance());
     }
 
+    /** Prompts the user to choose a transaction type and returns "DEPOSIT", "WITHDRAWAL", or "TRANSFER". */
     private String readTransactionType() {
         System.out.println("\nTransaction type:");
         System.out.println("  1. Deposit");
@@ -394,11 +417,21 @@ public class BankController {
         };
     }
 
+    /** Prompts for a positive transaction amount and returns the validated value. */
     private double readTransactionAmount() {
         System.out.print("Enter amount: $");
         return inputReader.readAmount();
     }
 
+    /**
+     * Shows a transaction confirmation screen and waits for Y/N.
+     *
+     * @param accNum          the account number
+     * @param txnType         the transaction type (DEPOSIT or WITHDRAWAL)
+     * @param amount          the transaction amount
+     * @param previousBalance the balance before the transaction
+     * @return true if the user confirmed; false if cancelled
+     */
     private boolean confirmTransaction(String accNum, String txnType, double amount, double previousBalance) {
         double expectedBalance = "DEPOSIT".equals(txnType) ? previousBalance + amount : previousBalance - amount;
 
@@ -419,6 +452,11 @@ public class BankController {
 
     // ── handleCreateAccount helpers ────────────────────────────────────────────
 
+    /**
+     * Prompts for a customer ID and looks the customer up in the system.
+     *
+     * @return the found Customer, or null if not found (error already printed)
+     */
     private Customer lookUpExistingCustomer() {
         System.out.print("Enter Customer ID (e.g. CUST001): ");
         String customerId = inputReader.nextLine();
@@ -439,6 +477,11 @@ public class BankController {
         return customer;
     }
 
+    /**
+     * Collects all required fields for a new customer and registers them via {@link CustomerService}.
+     *
+     * @return the newly registered Customer
+     */
     private Customer registerNewCustomer() {
         System.out.print("Enter customer name    : ");
         String name = inputReader.nextLine();
@@ -465,6 +508,11 @@ public class BankController {
                 : customerService.registerPremiumCustomer(name, age, contact, email, address);
     }
 
+    /**
+     * Loops until the user enters a syntactically valid email address.
+     *
+     * @return the validated email string
+     */
     private String readValidatedEmail() {
         while (true) {
             System.out.print("Enter customer email   : ");
@@ -477,6 +525,12 @@ public class BankController {
         }
     }
 
+    /**
+     * Prompts for account type and initial balance, then creates the account via the service layer.
+     *
+     * @param customer the customer to open the account for
+     * @return the newly created Account
+     */
     private Account openAccount(Customer customer) {
         System.out.println("\nAccount type:");
         System.out.printf("  1. Savings Account  (Interest: %.1f%%, Min Balance: $%.2f)%n", 3.5, 500.00);
@@ -492,6 +546,7 @@ public class BankController {
                 : accountService.createCheckingAccount(customer.getCustomerId(), initialBalance);
     }
 
+    /** Prints a formatted confirmation box after a new account is successfully created. */
     private void printAccountCreatedConfirmation(Customer customer, Account account) {
         System.out.println("\nAccount created successfully!");
         System.out.println("=".repeat(60));
