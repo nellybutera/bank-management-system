@@ -6,6 +6,17 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Low-level regex validation utilities.
+ * Each method either returns silently (valid input) or throws
+ * {@link com.bank_management_system.exceptions.IllegalArgumentException} with a human-readable message.
+ *
+ * <p>Also exposes {@link Predicate} constants (e.g. {@link #isValidEmail}) for use in stream pipelines
+ * and UI-side pre-validation loops where throwing is not desirable.</p>
+ *
+ * <p>Callers outside this package should generally go through
+ * {@link com.bank_management_system.exceptions.InputValidator}, which is the single validation facade.</p>
+ */
 public class ValidationUtils {
 
     private static final Pattern ACCOUNT_NUMBER = Pattern.compile("(?i)ACC\\d{3}");
@@ -34,6 +45,12 @@ public class ValidationUtils {
 
     // ── validate methods (throw on failure) ──────────────────────────────────
 
+    /**
+     * Validates that the given email is non-blank and matches a basic email pattern.
+     *
+     * @param email the email address to validate
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if blank or malformed
+     */
     public static void validateEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email must not be blank");
@@ -44,6 +61,12 @@ public class ValidationUtils {
         }
     }
 
+    /**
+     * Validates that the account number matches the expected format (e.g. ACC001).
+     *
+     * @param accountNumber the value to validate
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if blank or malformed
+     */
     public static void validateAccountNumber(String accountNumber) {
         if (accountNumber == null || accountNumber.trim().isEmpty()) {
             throw new IllegalArgumentException("Account number must not be blank");
@@ -54,6 +77,12 @@ public class ValidationUtils {
         }
     }
 
+    /**
+     * Validates that the customer ID matches the expected format (e.g. CUST001).
+     *
+     * @param customerId the value to validate
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if blank or malformed
+     */
     public static void validateCustomerId(String customerId) {
         if (customerId == null || customerId.trim().isEmpty()) {
             throw new IllegalArgumentException("Customer ID must not be blank");
@@ -64,6 +93,12 @@ public class ValidationUtils {
         }
     }
 
+    /**
+     * Validates that the contact number is non-blank and matches a phone number pattern.
+     *
+     * @param phone the phone number to validate
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if blank or malformed
+     */
     public static void validatePhone(String phone) {
         if (phone == null || phone.trim().isEmpty()) {
             throw new IllegalArgumentException("Contact must not be blank");
@@ -74,6 +109,12 @@ public class ValidationUtils {
         }
     }
 
+    /**
+     * Validates that the name is non-blank and contains only letters, spaces, hyphens, or apostrophes.
+     *
+     * @param name the name to validate
+     * @throws com.bank_management_system.exceptions.IllegalArgumentException if blank or contains invalid characters
+     */
     public static void validateName(String name) {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Name must not be blank");
