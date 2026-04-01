@@ -28,13 +28,14 @@ public class FunctionalUtils {
     }
 
     /**
-     * Sums the amounts in a list of transactions.
+     * Sums the amounts in a list of transactions using reduce().
      * Intended to be used on a group returned by {@link #groupByType}.
+     * Identity element 0.0 ensures an empty list returns zero.
      */
     public static double sumAmounts(List<Transaction> transactions) {
         return transactions.stream()
-                .mapToDouble(Transaction::getAmount)
-                .sum();
+                .map(Transaction::getAmount)
+                .reduce(0.0, Double::sum);
     }
 
     /**

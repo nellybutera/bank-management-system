@@ -8,8 +8,10 @@ A console-based Java application that simulates core banking operations — crea
 
 | File | Audience | What it covers |
 |---|---|---|
-| `README.md` *(this file)* | Everyone | Setup, features, quick class map, OOP/DSA highlights |
-| [`architecture.md`](architecture.md) | Developers | Full class responsibilities, sequence diagrams, SSOT design, DSA analysis |
+| `README.md` *(this file)* | Everyone | Setup, features, OOP/DSA highlights, Collections & Functional Programming |
+| [`docs/collections-architecture.md`](docs/collections-architecture.md) | Developers | Collection choices, stream patterns, reduce(), thread safety design, migration summary |
+| [`docs/git-workflow.md`](docs/git-workflow.md) | Developers | Branch structure, commit conventions, cherry-pick log |
+| [`architecture.md`](architecture.md) | Developers | Full class responsibilities, sequence diagrams, SSOT design |
 | [`dummyguide.md`](dummyguide.md) | Beginners | Plain-English explanations of every concept using real-world analogies |
 
 ---
@@ -20,15 +22,16 @@ On startup the application loads saved data from `data/accounts.txt` and `data/t
 
 1. **Create Account** — open an account for an existing customer by ID, or register a brand-new Regular or Premium customer; choose a Savings or Checking account and set an initial deposit
 2. **View Accounts** — display all accounts in a formatted table with balances and a bank-wide total
-3. **Process Transaction** — deposit or withdraw from any account with a confirmation prompt before execution
-4. **View Transaction History** — show all transactions for an account newest-first, with a deposit/withdrawal/net summary
-5. **Close Account** — soft-delete an account (sets status to `Closed`; requires zero balance; preserves full transaction history)
-6. **Apply Monthly Fees & Interest** — batch operation: deducts $10 from non-waived Checking accounts and credits 3.5% interest to active Savings accounts; all movements are logged to the ledger
-7. **View Customer Accounts** — look up all accounts owned by a specific customer by ID
-8. **Run Tests** — executes the full JUnit test suite via Maven and streams the formatted PASSED/FAILED results directly to the console
-9. **Save Data** — writes all accounts and transactions to pipe-delimited flat files under `data/`
-10. **Run Concurrent Simulation** — demonstrates thread safety; choose single-account multi-thread race or parallel-stream batch deposit across all accounts
-11. **Exit** — auto-saves all data and closes the application
+3. **Process Transaction** — deposit, withdraw, or transfer between accounts; confirmation prompt before execution
+4. **Generate Account Statement** — formatted statement sorted newest-first with totals and net change
+5. **View Transaction History** — same transactions with choice of sort order (date or amount)
+6. **Close Account** — soft-delete an account (sets status to `Closed`; requires zero balance; preserves full transaction history)
+7. **Apply Monthly Fees & Interest** — batch operation: deducts $10 from non-waived Checking accounts and credits 3.5% interest to active Savings accounts; all movements are logged to the ledger
+8. **View Customer Accounts** — look up all accounts owned by a specific customer by ID
+9. **Run Tests** — executes the full JUnit test suite via Maven and streams the formatted PASSED/FAILED results directly to the console
+10. **Save Data** — writes all accounts and transactions to pipe-delimited flat files under `data/`
+11. **Run Concurrent Simulation** — demonstrates thread safety; choose single-account multi-thread race or parallel-stream batch deposit across all accounts
+12. **Exit** — auto-saves all data and closes the application
 
 ---
 
@@ -71,7 +74,7 @@ src/main/java/com/bank_management_system/
 │   ├── Account.java             Abstract base — balance math, thread-safe updateBalance
 │   ├── SavingsAccount.java      $500 minimum balance, 3.5% interest
 │   ├── CheckingAccount.java     $1,000 overdraft, $10 monthly fee
-│   ├── AccountManager.java      Account storage (ArrayList)
+│   ├── AccountManager.java      Account storage (LinkedHashMap — O(1) lookup by account number)
 │   └── AccountService.java      Central orchestrator for all account ops
 ├── customers/
 │   ├── Customer.java            Abstract base — identity and account list
@@ -116,11 +119,11 @@ src/main/java/com/bank_management_system/
 
 | Concept | Where | Complexity |
 |---|---|---|
-| Dynamic array (ArrayList) | `AccountManager` (unbounded), `TransactionManager` (synchronizedList) | O(1) amortised append |
-| Dynamic array (ArrayList) | `Customer.accounts` — grows per customer | O(1) amortised append |
+| Linked hash map | `AccountManager.accounts` keyed by account number — insertion-order iteration, O(1) lookup | O(1) average |
+| Dynamic array (ArrayList) | `TransactionManager` (synchronizedList), `Customer.accounts` | O(1) amortised append |
 | Hash map | `Bank.customers` keyed by customer ID | O(1) average lookup |
 | Hash map | `FilePersistenceService.customerCache` — deduplication during file load | O(1) average lookup |
-| Linear search | `AccountManager.findAccountOrThrow()` | O(n) |
+| Map lookup | `AccountManager.findAccountOrThrow()` — direct `map.get()` | O(1) average |
 | Timestamp sort (newest first) | `TransactionManager.printTransactionTable()` — `Comparator.comparing(Transaction::getCreatedAt).reversed()` | O(n log n) |
 | Filter + accumulate | `calculateTotalDeposits()` / `calculateTotalWithdrawals()` using streams | O(n) |
 | Stream pipeline | `FilePersistenceService.loadAccounts()` — `Files.lines().filter().map().collect()` | O(n) |
@@ -129,6 +132,76 @@ src/main/java/com/bank_management_system/
 | Static sequence generator | Auto-increment IDs in `Account`, `Customer`, `Transaction` | O(1) |
 
 > Full DSA analysis with explanations is in [`architecture.md § 7`](architecture.md).
+
+---
+
+## Collections & Functional Programming
+
+### Collections in use
+
+| Collection | Where | Why |
+|---|---|---|
+| `LinkedHashMap<String, Account>` | `AccountManager` | O(1) lookup by account number; insertion order preserved for consistent display |
+| `HashMap<String, Customer>` | `Bank` | O(1) lookup by customer ID; order not needed |
+| `synchronizedList(ArrayList<Transaction>)` | `TransactionManager` | Thread-safe unbounded ledger; index access not needed |
+| `ArrayList<Account>` | `Customer.accounts` | Ordered list of accounts per customer; grows dynamically |
+| `HashMap<String, Customer>` | `FilePersistenceService.customerCache` | Deduplication during file load — prevents creating two objects for the same customer ID |
+
+### Functional programming patterns
+
+**Lambdas** are used wherever an anonymous function is clearer than a named method:
+```java
+// Predicate lambda — filter active Checking accounts
+Predicate<Account> activeChecking = account ->
+    account instanceof CheckingAccount && account.getStatus().equalsIgnoreCase("Active");
+
+// Runnable lambda — thread body
+Runnable task = () -> { account.deposit(50); };
+```
+
+**Method references** replace lambdas where a named method already exists:
+```java
+fees.forEach(transactionManager::addTransaction);  // instance method reference
+.map(Transaction::fromLine)                        // static method reference
+.forEach(Transaction::displayTransactionDetails)   // instance method reference on parameter
+accounts.forEach(accountManager::addAccount);      // instance method reference
+```
+
+**Stream pipelines** process collections without mutating them:
+```java
+// Load accounts from file — filter blank lines, map each to an object, collect
+Files.lines(path).filter(s -> !s.isBlank()).map(this::parseAccount).collect(toList())
+
+// Sort transactions newest-first
+transactions.stream()
+    .sorted(Comparator.comparing(Transaction::getCreatedAt).reversed())
+    .collect(toList())
+
+// Group transactions by type for summary totals
+transactions.stream().collect(Collectors.groupingBy(t -> t.getType().toUpperCase()))
+```
+
+**`reduce()`** accumulates transaction amounts into a total:
+```java
+// In FunctionalUtils.sumAmounts()
+transactions.stream()
+    .map(Transaction::getAmount)
+    .reduce(0.0, Double::sum);   // identity element 0.0; accumulator Double::sum
+```
+
+**`Predicate<String>`** constants in `ValidationUtils` allow validation to be passed as data:
+```java
+if (ValidationUtils.isValidEmail.test(email)) { ... }
+```
+
+**Parallel stream** uses the fork-join pool for batch operations:
+```java
+accounts.parallelStream()
+    .filter(a -> a.getStatus().equalsIgnoreCase("Active"))
+    .forEach(account -> account.deposit(50));
+```
+
+See [`docs/collections-architecture.md`](docs/collections-architecture.md) for design rationale and trade-offs.
 
 ---
 
@@ -167,7 +240,7 @@ All patterns are compiled once as `static final Pattern` constants in `Validatio
 
 ## Unit Tests
 
-29 tests across 4 files. Run with `mvn test` or via menu option 8 inside the application.
+32 tests across 4 files. Run with `mvn test` or via menu option 9 inside the application.
 
 ### AccountTest — 8 tests (JUnit 5, real objects)
 
@@ -210,7 +283,7 @@ Dedicated file for exception class behaviour, `InputValidator` edge cases, and e
 | `depositsMinusWithdrawalsEqualsNetBalanceChange` | PASSED |
 | `calculateTotalDepositsReturnsZeroForUnknownAccount` | PASSED |
 
-### AccountServiceTest — 5 tests (JUnit 5 + Mockito)
+### AccountServiceTest — 8 tests (JUnit 5 + Mockito)
 
 | Test | Result |
 |---|---|
@@ -219,6 +292,9 @@ Dedicated file for exception class behaviour, `InputValidator` edge cases, and e
 | `createSavingsAccountBelowMinimumThrowsException` | PASSED |
 | `createCheckingAccountWaivesFeeForPremiumCustomer` | PASSED |
 | `closeAccountWithNonZeroBalanceThrowsIllegalStateException` | PASSED |
+| `transferUpdatesBothAccountBalances` | PASSED |
+| `transferLogsTwoTransactions` | PASSED |
+| `transferToSameAccountThrowsIllegalArgumentException` | PASSED |
 
 `AccountServiceTest` uses `@Mock` for `Bank`, `AccountManager`, and `TransactionManager` so that each test isolates `AccountService` from its dependencies. `AccountTest`, `ExceptionTest`, and `TransactionManagerTest` use real instances — no mocks needed because those classes have no injected dependencies.
 
@@ -239,7 +315,7 @@ Thread safety is layered at two levels:
 - **`Account.updateBalance(double)`** — `synchronized` instance method called by both `deposit()` and `withdraw()`, preventing interleaved balance mutations from concurrent threads
 - **`TransactionManager`** — the internal `ArrayList` is wrapped in `Collections.synchronizedList()` for safe individual list operations, and `addTransaction()` is additionally `synchronized` to guard the compound read-then-write operation
 
-`ConcurrencyUtils` provides two demos accessible from menu option 10:
+`ConcurrencyUtils` provides two demos accessible from menu option 11:
 1. **Single-account thread simulation** — 5 named threads each deposit/withdraw concurrently, then the final balance is compared against the expected value
 2. **Parallel-stream batch** — `parallelStream()` over all active accounts applies a $50 deposit using the fork-join pool; thread names are printed to show parallelism
 
