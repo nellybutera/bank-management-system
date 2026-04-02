@@ -1,0 +1,25 @@
+# Claude Code local files — not for version control
+CLAUDE.md
+skills.md
+.claude/
+
+# Local developer notes — not for version control
+dev-notes.md
+persistence-concepts.md
+regex-validation-concepts.md
+concurrency-concepts.md
+Bank Account Management System (3).docx
+# Compiled output
+target/
+*.class
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

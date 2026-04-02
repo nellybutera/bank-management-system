@@ -2,7 +2,6 @@ package com.bank_management_system.accounts;
 
 import com.bank_management_system.customers.Customer;
 import com.bank_management_system.exceptions.IllegalStateException;
-import com.bank_management_system.exceptions.InsufficientFundsException;
 import com.bank_management_system.exceptions.InvalidAmountException;
 import com.bank_management_system.transactions.Transaction;
 import com.bank_management_system.utils.Transactable;
@@ -21,6 +20,19 @@ public abstract class Account implements Transactable {
         this.customer = customer;
         this.balance = balance;
         this.status = "Active";
+    }
+
+    /** Restoration constructor — rebuilds an Account from file without touching the counter. */
+    protected Account(String accountNumber, Customer customer, double balance, String status) {
+        this.accountNumber = accountNumber;
+        this.customer = customer;
+        this.balance = balance;
+        this.status = status;
+    }
+
+    /** Sets the account ID counter so the next new account gets the correct ID after loading from file. */
+    public static void resetCounter(int value) {
+        accountCounter = value;
     }
 
     /** Returns the unique account number (e.g. ACC001). */
@@ -47,6 +59,9 @@ public abstract class Account implements Transactable {
     /** Returns the account type label (e.g. "Savings" or "Checking"). */
     public abstract String getAccountType();
 
+    /** Serializes this account to a pipe-delimited line for file storage. */
+    public abstract String toFileLine();
+
     /**
      * Deposits the given amount into the account.
      *
@@ -62,7 +77,7 @@ public abstract class Account implements Transactable {
         if (amount <= 0) {
             throw new InvalidAmountException("Deposit must be greater than zero");
         }
-        balance += amount;
+        updateBalance(amount);
         return new Transaction(accountNumber, "DEPOSIT", amount, balance);
     }
 
@@ -83,33 +98,41 @@ public abstract class Account implements Transactable {
             throw new InvalidAmountException("Withdrawal amount must be greater than zero.");
         }
         validateWithdrawal(amount);
-        balance -= amount;
+        updateBalance(-amount);
         return new Transaction(accountNumber, "WITHDRAWAL", amount, balance);
     }
 
     /**
-     * Processes a deposit or withdrawal and returns whether it succeeded.
+     * Processes a deposit or withdrawal, propagating any validation or funds exceptions
+     * to the caller rather than swallowing them.
      *
      * @param amount the transaction amount
      * @param type   "DEPOSIT" or "WITHDRAWAL"
-     * @return true if the transaction succeeded, false otherwise
+     * @return true if the transaction succeeded
+     * @throws InvalidAmountException     if amount is zero or negative
+     * @throws InsufficientFundsException if the account has insufficient funds
+     * @throws IllegalArgumentException   if type is not "DEPOSIT" or "WITHDRAWAL"
      */
     @Override
     public boolean processTransaction(double amount, String type) {
-        try {
-            if ("deposit".equalsIgnoreCase(type)) {
-                deposit(amount);
-            } else if ("withdrawal".equalsIgnoreCase(type)) {
-                withdraw(amount);
-            } else {
-                System.out.println("Invalid transaction type. Must be 'DEPOSIT' or 'WITHDRAWAL'.");
-                return false;
-            }
-            return true;
-        } catch (InvalidAmountException | InsufficientFundsException e) {
-            System.out.println("Transaction failed: " + e.getMessage());
-            return false;
+        if ("DEPOSIT".equalsIgnoreCase(type)) {
+            deposit(amount);
+        } else if ("WITHDRAWAL".equalsIgnoreCase(type)) {
+            withdraw(amount);
+        } else {
+            throw new com.bank_management_system.exceptions.IllegalArgumentException(
+                    "Invalid transaction type: " + type + ". Must be DEPOSIT or WITHDRAWAL.");
         }
+        return true;
+    }
+
+    /**
+     * Updates the account balance by the given delta.
+     * Synchronized to ensure only one thread modifies the balance at a time,
+     * preventing race conditions during concurrent transactions.
+     */
+    private synchronized void updateBalance(double delta) {
+        this.balance += delta;
     }
 
     /**

@@ -8,25 +8,38 @@ A console-based Java application that simulates core banking operations — crea
 
 | File | Audience | What it covers |
 |---|---|---|
-| `README.md` *(this file)* | Everyone | Setup, features, quick class map, OOP/DSA highlights |
-| [`architecture.md`](architecture.md) | Developers | Full class responsibilities, sequence diagrams, SSOT design, DSA analysis |
+| `README.md` *(this file)* | Everyone | Setup, features, OOP/DSA highlights, Collections & Functional Programming |
+| [`docs/collections-architecture.md`](docs/collections-architecture.md) | Developers | Collection choices, stream patterns, reduce(), thread safety design, migration summary |
+| [`docs/git-workflow.md`](docs/git-workflow.md) | Developers | Branch structure, commit conventions, cherry-pick log |
+| [`architecture.md`](architecture.md) | Developers | Full class responsibilities, sequence diagrams, SSOT design |
 | [`dummyguide.md`](dummyguide.md) | Beginners | Plain-English explanations of every concept using real-world analogies |
 
 ---
 
 ## Features
 
-On startup the application pre-loads five sample customers and six accounts (Michael Chen has both a Checking and a Savings account). From the main menu a user (bank staff) can:
+On startup the application loads saved data from `data/accounts.txt` and `data/transactions.txt` (created automatically on first save). If no save file exists, five sample customers and six accounts are pre-loaded. From the main menu a user (bank staff) can:
 
-1. **Create Account** — open an account for an existing customer by ID, or register a brand-new Regular or Premium customer; choose a Savings or Checking account and set an initial deposit
-2. **View Accounts** — display all accounts in a formatted table with balances and a bank-wide total
-3. **Process Transaction** — deposit or withdraw from any account with a confirmation prompt before execution
-4. **View Transaction History** — show all transactions for an account newest-first, with a deposit/withdrawal/net summary
-5. **Close Account** — soft-delete an account (sets status to `Closed`; requires zero balance; preserves full transaction history)
-6. **Apply Monthly Fees & Interest** — batch operation: deducts $10 from non-waived Checking accounts and credits 3.5% interest to active Savings accounts; all movements are logged to the ledger
-7. **View Customer Accounts** — look up all accounts owned by a specific customer by ID
-8. **Run Tests** — executes the full JUnit test suite via Maven and streams the formatted PASSED/FAILED results directly to the console
-9. **Exit** — close the application
+1. **Manage Accounts** — sub-menu grouping all account lifecycle operations:
+   - Create Account — register a new or existing customer and open a Savings or Checking account
+   - View All Accounts — formatted table of all accounts with balances and a bank-wide total
+   - View Customer Accounts — look up all accounts owned by a customer ID
+   - Close Account — soft-delete (requires zero balance; preserves full transaction history)
+   - Apply Monthly Fees & Interest — deducts $10 from non-waived Checking accounts; credits 3.5% interest to active Savings accounts
+
+2. **Perform Transactions** — deposit, withdrawal, or transfer between accounts with a confirmation prompt
+
+3. **Account Statements** — sub-menu for reporting:
+   - Generate Account Statement — formatted statement sorted newest-first, with totals and net change
+   - View Transaction History — same data with choice of sort order (date or amount)
+
+4. **Save Data** — writes all accounts and transactions to pipe-delimited flat files under `data/`
+
+5. **Run Concurrent Simulation** — demonstrates thread safety; single-account multi-thread race or parallel-stream batch deposit across all accounts
+
+6. **Run Tests** — executes the full JUnit test suite via Maven and streams PASSED/FAILED results to the console
+
+7. **Exit** — auto-saves all data and closes the application
 
 ---
 
@@ -59,28 +72,32 @@ java -cp target/classes com.bank_management_system.Main
 
 ```
 src/main/java/com/bank_management_system/
-├── Main.java                    Entry point — wires all dependencies
+├── Main.java                    Entry point — wires all dependencies, loads persisted data
 ├── BankController.java          Menu loop and user interaction
 ├── InputReader.java             Validated console input
-├── DataInitializer.java         Sample data on startup
+├── DataInitializer.java         Sample data seeded on first run
 ├── bank/
 │   └── Bank.java                Customer registry (HashMap)
 ├── accounts/
-│   ├── Account.java             Abstract base — balance math and rules
+│   ├── Account.java             Abstract base — balance math, thread-safe updateBalance
 │   ├── SavingsAccount.java      $500 minimum balance, 3.5% interest
 │   ├── CheckingAccount.java     $1,000 overdraft, $10 monthly fee
-│   ├── AccountManager.java      Account storage (fixed array, max 50)
+│   ├── AccountManager.java      Account storage (LinkedHashMap — O(1) lookup by account number)
 │   └── AccountService.java      Central orchestrator for all account ops
 ├── customers/
 │   ├── Customer.java            Abstract base — identity and account list
 │   ├── RegularCustomer.java     Standard customer
 │   ├── PremiumCustomer.java     Fee-exempt, $10,000 minimum expectation
-│   └── CustomerService.java     Customer registration
-├── utils/
-│   ├── Transactable.java         
+│   └── CustomerService.java     Customer registration with email validation
 ├── transactions/
-│   ├── Transaction.java         Immutable event record
-│   └── TransactionManager.java  Ledger — Single Source of Truth (SSOT)
+│   ├── Transaction.java         Immutable event record with file serialisation
+│   └── TransactionManager.java  Thread-safe ledger using synchronizedList
+├── persistence/
+│   └── FilePersistenceService.java  NIO stream-based save/load for accounts and transactions
+├── utils/
+│   ├── Transactable.java        Interface for deposit/withdraw operations
+│   ├── ValidationUtils.java     Compiled regex Patterns and Predicate<String> validators
+│   └── ConcurrencyUtils.java    Thread simulation and parallel-stream batch demo
 └── exceptions/
     ├── InputValidator.java
     ├── AccountNotFoundException.java
@@ -110,12 +127,15 @@ src/main/java/com/bank_management_system/
 
 | Concept | Where | Complexity |
 |---|---|---|
-| Fixed-size array | `AccountManager` (50 slots), `TransactionManager` (200 slots) | O(1) append |
-| Dynamic array (ArrayList) | `Customer.accounts` — grows per customer | O(1) amortised append |
+| Linked hash map | `AccountManager.accounts` keyed by account number — insertion-order iteration, O(1) lookup | O(1) average |
+| Dynamic array (ArrayList) | `TransactionManager` (synchronizedList), `Customer.accounts` | O(1) amortised append |
 | Hash map | `Bank.customers` keyed by customer ID | O(1) average lookup |
-| Linear search | `AccountManager.findAccountOrThrow()` | O(n) |
-| Timestamp sort (newest first) | `TransactionManager.printTransactionTable()` — collects matching transactions into a `List`, sorts by `createdAt` descending via `Comparator.comparing(Transaction::getCreatedAt).reversed()` | O(n log n) |
-| Filter + accumulate | `calculateTotalDeposits()` / `calculateTotalWithdrawals()` | O(n) |
+| Hash map | `FilePersistenceService.customerCache` — deduplication during file load | O(1) average lookup |
+| Map lookup | `AccountManager.findAccountOrThrow()` — direct `map.get()` | O(1) average |
+| Timestamp sort (newest first) | `TransactionManager.printTransactionTable()` — `Comparator.comparing(Transaction::getCreatedAt).reversed()` | O(n log n) |
+| Filter + accumulate | `calculateTotalDeposits()` / `calculateTotalWithdrawals()` using streams | O(n) |
+| Stream pipeline | `FilePersistenceService.loadAccounts()` — `Files.lines().filter().map().collect()` | O(n) |
+| Parallel stream | `ConcurrencyUtils.runParallelBatchSimulation()` — fork-join pool across all accounts | O(n/p) |
 | Guard clauses (fail-fast) | `Account.deposit()` / `withdraw()` — validate before mutating | O(1) checks |
 | Static sequence generator | Auto-increment IDs in `Account`, `Customer`, `Transaction` | O(1) |
 
@@ -123,15 +143,88 @@ src/main/java/com/bank_management_system/
 
 ---
 
+## Collections & Functional Programming
+
+### Collections in use
+
+| Collection | Where | Why |
+|---|---|---|
+| `LinkedHashMap<String, Account>` | `AccountManager` | O(1) lookup by account number; insertion order preserved for consistent display |
+| `HashMap<String, Customer>` | `Bank` | O(1) lookup by customer ID; order not needed |
+| `synchronizedList(ArrayList<Transaction>)` | `TransactionManager` | Thread-safe unbounded ledger; index access not needed |
+| `ArrayList<Account>` | `Customer.accounts` | Ordered list of accounts per customer; grows dynamically |
+| `HashMap<String, Customer>` | `FilePersistenceService.customerCache` | Deduplication during file load — prevents creating two objects for the same customer ID |
+
+### Functional programming patterns
+
+**Lambdas** are used wherever an anonymous function is clearer than a named method:
+```java
+// Predicate lambda — filter active Checking accounts
+Predicate<Account> activeChecking = account ->
+    account instanceof CheckingAccount && account.getStatus().equalsIgnoreCase("Active");
+
+// Runnable lambda — thread body
+Runnable task = () -> { account.deposit(50); };
+```
+
+**Method references** replace lambdas where a named method already exists:
+```java
+fees.forEach(transactionManager::addTransaction);  // instance method reference
+.map(Transaction::fromLine)                        // static method reference
+.forEach(Transaction::displayTransactionDetails)   // instance method reference on parameter
+accounts.forEach(accountManager::addAccount);      // instance method reference
+```
+
+**Stream pipelines** process collections without mutating them:
+```java
+// Load accounts from file — filter blank lines, map each to an object, collect
+Files.lines(path).filter(s -> !s.isBlank()).map(this::parseAccount).collect(toList())
+
+// Sort transactions newest-first
+transactions.stream()
+    .sorted(Comparator.comparing(Transaction::getCreatedAt).reversed())
+    .collect(toList())
+
+// Group transactions by type for summary totals
+transactions.stream().collect(Collectors.groupingBy(t -> t.getType().toUpperCase()))
+```
+
+**`reduce()`** accumulates transaction amounts into a total:
+```java
+// In FunctionalUtils.sumAmounts()
+transactions.stream()
+    .map(Transaction::getAmount)
+    .reduce(0.0, Double::sum);   // identity element 0.0; accumulator Double::sum
+```
+
+**`Predicate<String>`** constants in `ValidationUtils` allow validation to be passed as data:
+```java
+if (ValidationUtils.isValidEmail.test(email)) { ... }
+```
+
+**Parallel stream** uses the fork-join pool for batch operations:
+```java
+accounts.parallelStream()
+    .filter(a -> a.getStatus().equalsIgnoreCase("Active"))
+    .forEach(account -> account.deposit(50));
+```
+
+See [`docs/collections-architecture.md`](docs/collections-architecture.md) for design rationale and trade-offs.
+
+---
+
 ## Input Validation
 
 All user input is validated before reaching the service layer via `InputValidator`. Invalid input throws `IllegalArgumentException` immediately and is caught by the controller — the menu loop always continues.
+
+All patterns are compiled once as `static final Pattern` constants in `ValidationUtils` and exposed as `Predicate<String>` fields. `InputValidator` delegates to `ValidationUtils` so the regex lives in one place.
 
 | Field | Rule |
 |---|---|
 | Customer / account name | Letters, spaces, hyphens, and apostrophes only — no digits or symbols |
 | Age | Must be between 18 and 120 |
 | Contact number | 7–15 characters; digits, spaces, `+`, `-`, `()` only |
+| Email | Standard email format — `local@domain.tld` |
 | Address | Letters, digits, spaces, commas, hyphens — covers "123 Main St, Springfield" |
 | Account number input | Must match `ACC` + digits (e.g. `ACC001`) |
 | Customer ID input | Must match `CUST` + digits (e.g. `CUST001`) |
@@ -155,7 +248,7 @@ All user input is validated before reaching the service layer via `InputValidato
 
 ## Unit Tests
 
-17 tests across 3 files. Run with `mvn test` or via menu option 8 inside the application.
+32 tests across 4 files. Run with `mvn test` or via menu option 9 inside the application.
 
 ### AccountTest — 8 tests (JUnit 5, real objects)
 
@@ -170,6 +263,25 @@ All user input is validated before reaching the service layer via `InputValidato
 | `overdraftWithinLimitAllowed` | PASSED |
 | `overdraftExceedThrowsOverdraftLimitExceededException` | PASSED |
 
+### ExceptionTest — 12 tests (JUnit 5, real objects)
+
+Dedicated file for exception class behaviour, `InputValidator` edge cases, and exception hierarchy contracts.
+
+| Test | Result |
+|---|---|
+| `validateAmountZeroThrowsInvalidAmountException` | PASSED |
+| `validateAmountNegativeThrowsInvalidAmountException` | PASSED |
+| `invalidAmountExceptionMessageIsDescriptive` | PASSED |
+| `withdrawBelowSavingsMinimumThrowsInsufficientFundsException` | PASSED |
+| `insufficientFundsExceptionMessageContainsBalance` | PASSED |
+| `overdraftExceededExtendsInsufficientFundsException` | PASSED |
+| `overdraftExceededIsSpecificSubtype` | PASSED |
+| `depositToClosedAccountThrowsIllegalStateException` | PASSED |
+| `withdrawFromClosedAccountThrowsIllegalStateException` | PASSED |
+| `accountNotFoundExceptionCarriesMessage` | PASSED |
+| `menuChoiceBelowRangeThrowsIllegalArgumentException` | PASSED |
+| `menuChoiceAboveRangeThrowsIllegalArgumentException` | PASSED |
+
 ### TransactionManagerTest — 4 tests (JUnit 5, real objects)
 
 | Test | Result |
@@ -179,7 +291,7 @@ All user input is validated before reaching the service layer via `InputValidato
 | `depositsMinusWithdrawalsEqualsNetBalanceChange` | PASSED |
 | `calculateTotalDepositsReturnsZeroForUnknownAccount` | PASSED |
 
-### AccountServiceTest — 5 tests (JUnit 5 + Mockito)
+### AccountServiceTest — 8 tests (JUnit 5 + Mockito)
 
 | Test | Result |
 |---|---|
@@ -188,61 +300,49 @@ All user input is validated before reaching the service layer via `InputValidato
 | `createSavingsAccountBelowMinimumThrowsException` | PASSED |
 | `createCheckingAccountWaivesFeeForPremiumCustomer` | PASSED |
 | `closeAccountWithNonZeroBalanceThrowsIllegalStateException` | PASSED |
+| `transferUpdatesBothAccountBalances` | PASSED |
+| `transferLogsTwoTransactions` | PASSED |
+| `transferToSameAccountThrowsIllegalArgumentException` | PASSED |
 
-`AccountServiceTest` uses `@Mock` for `Bank`, `AccountManager`, and `TransactionManager` so that each test isolates `AccountService` from its dependencies. `AccountTest` and `TransactionManagerTest` use real instances — no mocks needed because those classes have no injected dependencies.
+`AccountServiceTest` uses `@Mock` for `Bank`, `AccountManager`, and `TransactionManager` so that each test isolates `AccountService` from its dependencies. `AccountTest`, `ExceptionTest`, and `TransactionManagerTest` use real instances — no mocks needed because those classes have no injected dependencies.
+
+---
+
+## File Persistence
+
+On startup `Main` calls `FilePersistenceService.loadAccounts()` and `loadTransactions()`. These use `Files.lines()` to stream pipe-delimited records from `data/accounts.txt` and `data/transactions.txt`, mapping each line through a method reference (`this::parseAccount`, `Transaction::fromLine`) and collecting into `ArrayList`. If the files are empty or absent, `DataInitializer` seeds the default sample data instead.
+
+Accounts and transactions expose `toFileLine()` for serialisation. Restoration constructors on `Account`, `Customer`, and `Transaction` accept an explicit ID so the static auto-increment counter is not touched during loading. After loading, `resetCounters()` parses the highest numeric suffix from the loaded IDs and calls `Account.resetCounter()`, `Customer.resetCounter()`, and `Transaction.resetCounter()` so subsequent creates resume from the correct next ID.
+
+---
+
+## Concurrency
+
+Thread safety is layered at two levels:
+
+- **`Account.updateBalance(double)`** — `synchronized` instance method called by both `deposit()` and `withdraw()`, preventing interleaved balance mutations from concurrent threads
+- **`TransactionManager`** — the internal `ArrayList` is wrapped in `Collections.synchronizedList()` for safe individual list operations, and `addTransaction()` is additionally `synchronized` to guard the compound read-then-write operation
+
+`ConcurrencyUtils` provides two demos accessible from menu option 11:
+1. **Single-account thread simulation** — 5 named threads each deposit/withdraw concurrently, then the final balance is compared against the expected value
+2. **Parallel-stream batch** — `parallelStream()` over all active accounts applies a $50 deposit using the fork-join pool; thread names are printed to show parallelism
 
 ---
 
 ## Git Workflow
 
-This project uses **feature branches** and **cherry-pick** to move tested changes selectively between branches.
+See [`docs/git-workflow.md`](docs/git-workflow.md) for the full branch structure, commit conventions, common commands, and cherry-pick log.
 
-### Branch structure
-
-```bash
-main                  # stable, production-ready code
-feature/exceptions    # custom exception handling and input validation
-feature/refactor      # clean code, Javadoc, and formatting standards
-```
-
-### Common commands used
+### Branch overview
 
 ```bash
-# Create and switch to a new feature branch
-git checkout -b feature/refactor
-
-# Stage specific files for a focused commit
-git add src/main/java/com/bank_management_system/transactions/TransactionManager.java
-
-# Commit with a descriptive message
-git commit -m "renamed constants to UPPER_SNAKE_CASE and broke down long methods into smaller ones"
-
-# View commit history on the current branch
-git log --oneline
-
-# Cherry-pick a specific commit from another branch into the current one
-git cherry-pick <commit-hash>
-
-# Example: bring the exceptions commit from feature/exceptions into feature/refactor
-git cherry-pick 58e273b
-
-# Stash uncommitted changes before a cherry-pick to avoid conflicts
-git stash
-git cherry-pick <commit-hash>
-git stash pop
+main                                        # stable, production-ready
+feature/refactor                            # clean code, Javadoc, naming standards
+feature/exceptions                          # custom exception handling and validation
+feature/testing                             # JUnit 5 test suite
+feature/collections                         # Java Collections API migration
+feature/file-persistence                    # NIO file I/O with functional streams
+feature/regex-validation                    # compiled-regex input validation
+feature/concurrency                         # thread safety and concurrent simulation
+feature/clean-code-and-missing-lab2-functionality  # ExceptionTest, docs/, README update
 ```
-
-### Why cherry-pick?
-
-Instead of merging the entire `feature/exceptions` branch (which would bring in unrelated history), cherry-pick selectively applies only the one commit that added the input validators — keeping `feature/refactor` focused on its own purpose.
-
-### Cherry-pick log
-
-| Commit | From branch | To branch | What it brought | Why |
-|---|---|---|---|---|
-| `58e273b` | `feature/exceptions` | `feature/refactor` | Try-catch blocks in BankController, CustomerService; InputValidator with regex validators | Brought input validation into the refactor branch without merging unrelated exception history |
-| `c392b8d` | `feature/refactor` | `feature/exceptions` | UPPER_SNAKE_CASE constants (`MAX_ACCOUNTS`, `MAX_TRANSACTIONS`), TransactionManager split into private helpers, `sumByTransactionType` DRY method | Tests need the refactored TransactionManager methods to exist on this branch |
-| `4776cf3` | `feature/refactor` | `feature/exceptions` | Javadoc on Account, AccountService, Bank, Customer, CheckingAccount, SavingsAccount, InputReader, DataInitializer | Completes Javadoc coverage across all classes used in the test suite |
-| `731b732` | `feature/refactor` | `feature/exceptions` | Javadoc on PremiumCustomer and RegularCustomer | Finishes the Javadoc pass for the full customer class hierarchy |
-| `9c0ad63` | `feature/refactor` | `feature/exceptions` | BankController refactored into helper methods (≤25 lines each), `validateAccountNumber` / `validateCustomerId` calls added | Brings the full validation flow onto this branch before integration testing |
-| `77a9103` | `feature/refactor` | `feature/exceptions` | README, architecture.md, dummyguide.md updated with refactoring and validation changes | Keeps documentation consistent across both branches at this point |

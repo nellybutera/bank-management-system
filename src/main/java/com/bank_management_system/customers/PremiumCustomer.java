@@ -1,12 +1,28 @@
 package com.bank_management_system.customers;
 
+/**
+ * A premium-tier customer who enjoys enhanced benefits:
+ * monthly fee waiver on Checking accounts and a minimum required balance of $10,000.
+ */
 public class PremiumCustomer extends Customer {
 
+    private static final double MINIMUM_BALANCE = 10000;
 
-    public PremiumCustomer(String name, int age, String contact, String address) {
-        super(name, age, contact, address);
+    public PremiumCustomer(String name, int age, String contact, String email, String address) {
+        super(name, age, contact, email, address);
     }
 
+    /** Restoration constructor — rebuilds from file data with an explicit customer ID. */
+    public PremiumCustomer(String customerId, String name, int age, String contact, String email, String address) {
+        super(customerId, name, age, contact, email, address);
+    }
+
+    /**
+     * Returns the minimum balance required for a Premium account.
+     *
+     * @return the minimum balance amount
+     */
+    public double getMinimumBalance() { return MINIMUM_BALANCE; }
 
     /**
      * Premium customers are always eligible for a monthly fee waiver.

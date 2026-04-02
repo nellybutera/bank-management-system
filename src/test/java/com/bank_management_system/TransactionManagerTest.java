@@ -19,7 +19,7 @@ class TransactionManagerTest {
     @BeforeEach
     void setUp() {
         transactionManager = new TransactionManager();
-        RegularCustomer customer = new RegularCustomer("Test User", 25, "555-1111", "456 Test Ave");
+        RegularCustomer customer = new RegularCustomer("Test User", 25, "555-1111", "test@email.com", "456 Test Ave");
         account       = new SavingsAccount(customer, 1000.00);
         accountNumber = account.getAccountNumber();
     }

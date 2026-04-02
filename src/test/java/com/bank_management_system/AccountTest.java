@@ -22,7 +22,7 @@ class AccountTest {
 
     @BeforeEach
     void setUp() {
-        RegularCustomer customer = new RegularCustomer("Test User", 30, "555-0000", "123 Test St");
+        RegularCustomer customer = new RegularCustomer("Test User", 30, "555-0000", "test@email.com", "123 Test St");
         savings  = new SavingsAccount(customer, 1000.00);
         checking = new CheckingAccount(customer, 500.00, false);
     }

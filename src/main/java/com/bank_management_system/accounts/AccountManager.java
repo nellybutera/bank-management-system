@@ -1,51 +1,53 @@
 package com.bank_management_system.accounts;
 
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import com.bank_management_system.exceptions.AccountNotFoundException;
+import com.bank_management_system.utils.FunctionalUtils;
 
+/**
+ * In-memory store for all bank accounts.
+ * Uses a {@link LinkedHashMap} to provide O(1) lookup by account number
+ * while preserving insertion order for deterministic display.
+ */
 public class AccountManager {
 
-    private static final int MAX_ACCOUNTS = 50;
-
-    private final Account[] accounts = new Account[MAX_ACCOUNTS];
-    private int accountCount = 0;
+    private final LinkedHashMap<String, Account> accounts = new LinkedHashMap<>();
 
     /**
-     * Adds a new account to the ledger.
+     * Adds an account to the store, keyed by its account number (upper-cased).
      *
-     * @param account the account to add
-     * @throws IllegalStateException if the maximum account capacity has been reached
+     * @param account the account to register
      */
     public void addAccount(Account account) {
-        if (accountCount >= MAX_ACCOUNTS) {
-            throw new IllegalStateException(
-                    "Maximum account capacity of " + MAX_ACCOUNTS + " reached.");
-        }
-        accounts[accountCount++] = account;
+        accounts.put(account.getAccountNumber().toUpperCase(), account);
     }
 
     /**
-     * Finds and returns an account by its account number.
+     * Returns the account for the given account number, or throws if not found.
      *
-     * @param accountNumber the account number to search for
+     * @param accountNumber the account number to look up (case-insensitive)
      * @return the matching Account
-     * @throws AccountNotFoundException if no account with the given number exists
+     * @throws com.bank_management_system.exceptions.AccountNotFoundException if no account exists with that number
      */
     public Account findAccountOrThrow(String accountNumber) {
-        for (int i = 0; i < accountCount; i++) {
-            if (accounts[i].getAccountNumber().equalsIgnoreCase(accountNumber)) {
-                return accounts[i];
-            }
+        Account account = accounts.get(accountNumber.toUpperCase());
+        if (account == null) {
+            throw new AccountNotFoundException("Account not found: " + accountNumber);
         }
-        throw new AccountNotFoundException("Account not found: " + accountNumber);
+        return account;
     }
 
     /**
-     * Prints a formatted table of all accounts along with the combined bank balance.
+     * Prints a formatted table of all accounts to the console,
+     * followed by the total account count and combined bank balance.
      */
     public void viewAllAccounts() {
-        if (accountCount == 0) {
+        if (accounts.isEmpty()) {
             System.out.println("  No accounts found.");
             return;
         }
@@ -55,34 +57,36 @@ public class AccountManager {
                 "ACC NO", "CUSTOMER NAME", "TYPE", "BALANCE", "STATUS");
         System.out.println("  " + "=".repeat(76));
 
-        for (int i = 0; i < accountCount; i++) {
-            accounts[i].displayAccountDetails();
+        accounts.values().forEach(account -> {
+            account.displayAccountDetails();
             System.out.println("  " + "-".repeat(76));
-        }
+        });
 
         System.out.printf("  Total Accounts: %d | Total Bank Balance: $%,.2f%n",
-                accountCount, getTotalBalance());
+                accounts.size(), getTotalBalance());
     }
 
-    /**
-     * Returns the sum of balances across all accounts.
-     *
-     * @return total balance held by the bank
-     */
+    /** Returns the sum of current balances across all accounts. */
     public double getTotalBalance() {
-        double total = 0;
-        for (int i = 0; i < accountCount; i++) {
-            total += accounts[i].getBalance();
-        }
-        return total;
+        return FunctionalUtils.totalBalance(accounts.values());
+    }
+
+    /** Returns a live view of all accounts (insertion order preserved). */
+    public Collection<Account> getAccounts() {
+        return accounts.values();
     }
 
     /**
-     * Returns a copy of all currently stored accounts.
+     * Returns all accounts that satisfy the given predicate.
+     * Used by {@link com.bank_management_system.accounts.AccountService} to apply fees and interest
+     * to a filtered subset of accounts without exposing the internal map.
      *
-     * @return array of active accounts
+     * @param criteria a {@link Predicate} that returns true for accounts to include
+     * @return a new list containing only the matching accounts
      */
-    public Account[] getAccounts() {
-        return Arrays.copyOf(accounts, accountCount);
+    public List<Account> findAccountsMatching(Predicate<Account> criteria) {
+        return accounts.values().stream()
+                .filter(criteria)
+                .collect(Collectors.toList());
     }
 }

@@ -3,7 +3,7 @@ package com.bank_management_system.customers;
 import java.util.Collection;
 
 import com.bank_management_system.bank.Bank;
-import com.bank_management_system.utils.InputValidator;
+import com.bank_management_system.exceptions.InputValidator;
 
 public class CustomerService {
     private final Bank bank;
@@ -21,9 +21,9 @@ public class CustomerService {
      * @param address the customer's home address
      * @return the newly created RegularCustomer
      */
-    public RegularCustomer registerRegularCustomer(String name, int age, String contact, String address) {
-        validateInput(name, age, contact, address);
-        RegularCustomer customer = new RegularCustomer(name.trim(), age, contact.trim(), address.trim());
+    public RegularCustomer registerRegularCustomer(String name, int age, String contact, String email, String address) {
+        validateInput(name, age, contact, email, address);
+        RegularCustomer customer = new RegularCustomer(name.trim(), age, contact.trim(), email.trim(), address.trim());
         bank.addCustomer(customer);
         return customer;
     }
@@ -34,12 +34,13 @@ public class CustomerService {
      * @param name    the customer's full name
      * @param age     the customer's age
      * @param contact the customer's phone number
+     * @param email   the customer's email address
      * @param address the customer's home address
      * @return the newly created PremiumCustomer
      */
-    public PremiumCustomer registerPremiumCustomer(String name, int age, String contact, String address) {
-        validateInput(name, age, contact, address);
-        PremiumCustomer customer = new PremiumCustomer(name.trim(), age, contact.trim(), address.trim());
+    public PremiumCustomer registerPremiumCustomer(String name, int age, String contact, String email, String address) {
+        validateInput(name, age, contact, email, address);
+        PremiumCustomer customer = new PremiumCustomer(name.trim(), age, contact.trim(), email.trim(), address.trim());
         bank.addCustomer(customer);
         return customer;
     }
@@ -53,10 +54,11 @@ public class CustomerService {
         return bank.getAllCustomers();
     }
 
-    private void validateInput(String name, int age, String contact, String address){
+    private void validateInput(String name, int age, String contact, String email, String address) {
         InputValidator.validateName(name);
         InputValidator.validateAge(age);
         InputValidator.validateContact(contact);
+        InputValidator.validateEmail(email);
         InputValidator.validateAddress(address);
     }
 }

@@ -4,24 +4,51 @@ import java.util.Collections;
 import java.util.List;
 
 import com.bank_management_system.accounts.Account;
+import com.bank_management_system.utils.FunctionalUtils;
 
+/**
+ * Abstract base class representing a bank customer.
+ * Subclasses ({@link RegularCustomer}, {@link PremiumCustomer}) define tier-specific behaviour
+ * such as fee waiver eligibility and minimum balance requirements.
+ *
+ * <p>Each customer owns an {@link java.util.ArrayList} of linked accounts, which grows
+ * dynamically as new accounts are opened.</p>
+ */
 public abstract class Customer {
     private final String customerId;
     private String name;
     private int age;
     private String contact;
+    private String email;
     private String address;
     private final List<Account> accounts;
 
     private static int customerCounter = 1;
 
-    public Customer(String name, int age, String contact, String address){
+    public Customer(String name, int age, String contact, String email, String address){
         this.customerId = String.format("CUST%03d", customerCounter++);
         this.name = name;
         this.age = age;
         this.contact = contact;
+        this.email = email;
         this.address = address;
         this.accounts = new ArrayList<>();
+    }
+
+    /** Restoration constructor — rebuilds a Customer from file without touching the counter. */
+    protected Customer(String customerId, String name, int age, String contact, String email, String address) {
+        this.customerId = customerId;
+        this.name = name;
+        this.age = age;
+        this.contact = contact;
+        this.email = email;
+        this.address = address;
+        this.accounts = new ArrayList<>();
+    }
+
+    /** Sets the customer ID counter so the next new customer gets the correct ID after loading from file. */
+    public static void resetCounter(int value) {
+        customerCounter = value;
     }
 
     /** Returns true if this customer qualifies for a monthly fee waiver. Default is false. */
@@ -41,13 +68,26 @@ public abstract class Customer {
     /** Returns the customer's age. */
     public int getAge() { return age; }
 
+    /** Updates the customer's age. */
+    public void setAge(int userAge) { age = userAge; }
+
     /** Returns the customer's contact number. */
     public String getContact() { return contact; }
 
+    /** Updates the customer's contact number. */
+    public void setContact(String phone) { contact = phone; }
+
+    /** Returns the customer's email address. */
+    public String getEmail() { return email; }
+
+    /** Updates the customer's email address. */
+    public void setEmail(String email) { this.email = email; }
 
     /** Returns the customer's address. */
     public String getAddress() { return address; }
 
+    /** Updates the customer's address. */
+    public void setAddress(String location) { address = location; }
 
     /** Links an account to this customer's portfolio. */
     public void addAccount(Account account) {
@@ -73,11 +113,7 @@ public abstract class Customer {
     }
 
     private double calculateTotalAssets() {
-        double total = 0;
-        for (Account acc : accounts) {
-            total += acc.getBalance();
-        }
-        return total;
+        return FunctionalUtils.totalBalance(accounts);
     }
 
     /**
